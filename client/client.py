@@ -25,7 +25,17 @@ class Client:
         heartbeat_thread = threading.Thread(target=self.heartbeat)
         heartbeat_thread.daemon = True
         heartbeat_thread.start()
+        try:
+            data = {'agent_id': self.local_ip}
+            req = requests.post(f"http://{self.ip}:{self.port}/register", json=data, timeout=3)
+        except:
+            print("Failed to register agent")
         while True:
+            req = requests.get(f"http://{self.ip}:{self.port}/targets")
+            print(req.text)
+            targets = req.text.split(",")
+            if self.local_ip in targets:
+                print("Agent is in the target list")
             time.sleep(120)
         
             
