@@ -29,13 +29,20 @@ class Client:
             data = {'agent_id': self.local_ip}
             req = requests.post(f"http://{self.ip}:{self.port}/register", json=data, timeout=3)
         except:
-            print("Failed to register agent")
+            print("Failed to register agent (" + self.local_ip + ")")
         while True:
             req = requests.get(f"http://{self.ip}:{self.port}/targets")
             print(req.text)
-            targets = req.text.split(",")
+            targets = req.text.split("\n")
             if self.local_ip in targets:
                 print("Agent is in the target list")
+                try:
+                    req = requests.get(f"http://{self.ip}:{self.port}/tasks")
+                    print(req.json())
+                    task = req.json().get('action')
+                    print(task)
+                except Exception as e:
+                    print(e)
             time.sleep(120)
         
             

