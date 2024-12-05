@@ -32,17 +32,36 @@ def main():
     while True:
         userin = input("Festivus> ")
         #Process one word commands
-        pass
+        if userin.upper() in ["HELP", "?"]:
+            options()
+            continue
         #Process multi-word commands
         splits = userin.split(" ")
-        if splits[0].upper() == "TARGET":
+        #Show related commands
+        if userin.upper().strip() == "SHOW AGENTS":
+            r = requests.get(f"{URL}/get-agents")
+            agents = r.json()
+            print("Agents:")
+            for agent in agents:
+                print(f"{agent['agent_id']} - {agent['status']}")
+        elif userin.upper().strip() == "SHOW TARGETS":
+            r = requests.get(f"{URL}/targets")
+            targets = r.text.split("\n")
+            print("Targets:")
+            for target in targets:
+                print(target)
+        #Targeting related commands
+        elif splits[0].upper() == "TARGET":
             ips = splits[1].split(",")
             set_targets(ips)
         elif splits[0].upper() == "UNTARGET":
             ips = splits[1].split(",")
             untarget(ips)
-        elif splits[0].upper() == "CLEAR" and splits[1].upper() == "TARGETS":
+        elif userin.upper().strip() == "CLEAR TARGETS":
             clear_targets()
+        else:
+            print("Invalid command")
+            options()
 
         
 
