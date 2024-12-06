@@ -23,6 +23,8 @@ class Task(db.Model):
     command = db.Column(db.String(500), nullable=True,default="NULL")
     filename = db.Column(db.String(100), nullable=True,default="NULL")
     completed = db.Column(db.Boolean, default=False)
+    result = db.Column(db.String(10000), nullable=True,default="NULL")
+    returncode = db.Column(db.Integer, nullable=True,default=1234) # Default value to differentiate from actual return codes
 
 # Initialize database
 with app.app_context():
@@ -76,6 +78,15 @@ def get_targets():
 def submit_results():
     try:
         print(request.json)
+        data = request.json
+        task_id = data['task_id']
+        result = data['result']
+        task = Task.query.get(task_id)
+        task.completed = True
+        task.returncode = data['returncode']
+        if task.result != "NULL":
+            task.result = result
+        db.session.commit()
         return jsonify({'status': 'success'})
     except:
         pass
@@ -99,6 +110,8 @@ def get_task():
         if task:
             task_data = {
                 'action': task.action,
+                'command': task.command,
+                'filename': task.filename,
                 'task_id': task.id
             }
             return jsonify(task_data)
