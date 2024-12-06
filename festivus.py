@@ -60,11 +60,12 @@ def check_agent_status():
     while True:
         timeout = 300  # 5 minutes
         now = datetime.now(tz=timezone.utc)
-        agents = Agent.query.all()
-        for agent in agents:
-            if (now - agent.last_seen).total_seconds() > timeout:
-                agent.status = 'inactive'
-        db.session.commit()
+        with app.app_context():
+            agents = Agent.query.all()
+            for agent in agents:
+                if (now - agent.last_seen).total_seconds() > timeout:
+                    agent.status = 'inactive'
+            db.session.commit()
         time.sleep(180)
 
 
@@ -197,7 +198,7 @@ def clear_targets():
 def homepage():
     webpage_content = """
     <h1>Welcome to Festivus</h1>
-    <h3>Agents:</h3>
+    <h3>A Festivus for the rest of us</h3>
     """
     for agent in Agent.query.all():
         webpage_content += f"<p>{agent.agent_id} - {agent.status}</p>"
@@ -207,7 +208,7 @@ def homepage():
 def main():
     agent_checker = threading.Thread(target=check_agent_status,daemon=True)
     agent_checker.start()
-    app.run(debug=True,host='0.0.0.0',port=80)
+    app.run(debug=False,host='0.0.0.0',port=80)
 
 
 if __name__ == '__main__':
