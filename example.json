@@ -1,0 +1,6 @@
+{
+    "agent_id": "x.x.x.x (filled in automatically by manager)",
+    "action": "command||download||upload",
+    "command": "NULL||command",
+    "filename": "NULL||filename"
+}

