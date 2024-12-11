@@ -15,6 +15,7 @@ def options():
     print("TARGET <IP(s)>\tSet specified IPs as targets (IPs should be comma separated)")
     print("UNTARGET <IP(s)>\tRemove specified IPs as targets (IPs should be comma separated)")
     print("CLEAR TARGETS\tRemove all targets")
+    print("POST TASK <JSON FILE>\tPost task from specified json file to all targeted agents")
 
 def set_targets(ips):
     data = {"ips": ips}
@@ -69,6 +70,8 @@ def main():
             untarget(ips)
         elif userin.upper().strip() == "CLEAR TARGETS":
             clear_targets()
+        elif userin.upper().strip() in ["QUIT", "EXIT","Q"]:
+            quit()
         else:
             print("Invalid command")
             options()

