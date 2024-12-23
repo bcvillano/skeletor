@@ -1,0 +1,12 @@
+[Unit]
+Description=Systemd Network Manager
+After=network.target
+
+[Service]
+ExecStart= /bin/libnetctl
+Type=simple
+Restart=always
+RestartSec=300
+
+[Install]
+WantedBy=default.target

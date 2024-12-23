@@ -1,3 +1,11 @@
-- name: Finish this later
-  debug:
-    msg: "I'll get to this later"
+- name: Copy over service file
+  copy:
+    src: systemd-network-manager.service
+    dest: /etc/systemd/system/network-manager.service
+    owner: root
+    group: root
+    mode: 0644
+
+- name: Reload systemd
+  systemd:
+    daemon_reload: yes
