@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify, abort, send_from_directory
+from flask import Flask, request, jsonify, abort, send_from_directory,render_template
 from flask_sqlalchemy import SQLAlchemy
 import requests
 from datetime import datetime, timezone
@@ -75,6 +75,9 @@ def check_agent_status():
         with app.app_context():
             agents = Agent.query.all()
             for agent in agents:
+                if agent.last_seen is not None:
+                    if agent.last_seen.tzinfo is None:  # If it's naive, assume it's in UTC
+                        agent.last_seen = agent.last_seen.replace(tzinfo=timezone.utc)
                 if (now - agent.last_seen).total_seconds() > timeout:
                     agent.status = 'inactive'
             db.session.commit()
