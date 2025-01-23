@@ -28,10 +28,10 @@ class Agent(db.Model):
 class Task(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     agent_id = db.Column(db.String(100), db.ForeignKey('agent.agent_id'), nullable=False)
-    action = db.Column(db.String(500), nullable=True,default="NULL")
-    command = db.Column(db.String(500), nullable=True,default="NULL")
-    filename = db.Column(db.String(100), nullable=True,default="NULL")
-    destination = db.Column(db.String(100), nullable=True,default="NULL")
+    action = db.Column(db.String(5000), nullable=True,default="NULL")
+    command = db.Column(db.String(5000), nullable=True,default="NULL")
+    filename = db.Column(db.String(1000), nullable=True,default="NULL")
+    destination = db.Column(db.String(1000), nullable=True,default="NULL")
     completed = db.Column(db.Boolean, default=False)
     result = db.Column(db.String(10000), nullable=True,default="NULL")
     returncode = db.Column(db.Integer, nullable=True,default=1234) # Default value to differentiate from actual return codes
@@ -147,8 +147,8 @@ def get_task():
                 'filename': task.filename,
                 'task_id': task.id
             }
-            return jsonify(task_data)
-    return "NULL"
+            return jsonify(task_data),200
+    return jsonify({"status": "No tasks"}), 204
 
 @app.route('/download/<filename>', methods=['GET'])
 def download_file(filename):
@@ -242,12 +242,13 @@ def make_task():
         filename = data.get('filename')
     else:
         filename = "NULL"
-    if agent_id and action:
+    try:
         new_task = Task(agent_id=agent_id, action=action, command=command, filename=filename)
         db.session.add(new_task)
         db.session.commit()
         return jsonify({"message": "Task created successfully"}), 201
-    return jsonify({"error": "Invalid data"}), 400
+    except:
+        return jsonify({"error": "Invalid data"}), 400
 
 #Main Page
 @app.route('/', methods=['GET'])

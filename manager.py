@@ -23,7 +23,7 @@ def set_targets(ips):
 
 def get_targets():
     r = requests.get(f"{URL}/targets")
-    return r.text.split("\n")
+    return [target for target in r.text.split("\n") if target.strip()]
 
 def untarget(ips):
     data = {"ips": ips}

