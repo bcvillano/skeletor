@@ -33,7 +33,7 @@ class Client:
             print("Failed to register agent (" + self.local_ip + ")")
         while True:
             try:
-                req = requests.get(f"http://{self.server_ip}:{self.port}/tasks")
+                req = requests.post(f"http://{self.server_ip}:{self.port}/tasks", json={'agent_id': self.local_ip}, timeout=3)
                 if req.status_code not in [200, 201, 204]:
                     raise ValueError("Failed to get tasks")
                 elif req.status_code == 204:
