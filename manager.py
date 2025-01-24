@@ -77,9 +77,11 @@ def main():
         elif userin.upper().strip() == "CLEAR TARGETS":
             clear_targets()
         elif splits[0].upper() == "POST" and splits[1].upper() == "TASK":
-            post_task(splits[2])
+            userin = userin.upper()
+            post_task(userin.removeprefix("POST TASK "))
         elif splits[0].upper() == "CMD":
-            post_cmd(splits[1])
+            userin = userin.upper()
+            post_cmd(userin.removeprefix("CMD "))
         elif userin.upper().strip() in ["QUIT", "EXIT","Q"]:
             quit()
         else:

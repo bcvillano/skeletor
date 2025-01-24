@@ -107,7 +107,8 @@ def register_agent():
 @app.route('/results', methods=['POST'])
 def submit_results():
     try:
-        print(request.json)
+        # print(request.json)
+        print(f"IP: {request.json.get(agent_id)}" + "\n" + f"Result: {request.json.get(result)}"+"\n")
         data = request.json
         agent_id = data['agent_id']
         task_id = data['task_id']
