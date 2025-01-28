@@ -80,8 +80,8 @@ def main():
             userin = userin.upper()
             post_task(userin.removeprefix("POST TASK "))
         elif splits[0].upper() == "CMD":
-            userin = userin.upper()
-            post_cmd(userin.removeprefix("CMD "))
+            command = userin[4:].strip()
+            post_cmd(command)
         elif userin.upper().strip() in ["QUIT", "EXIT","Q"]:
             quit()
         else:

