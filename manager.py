@@ -1,7 +1,7 @@
 #!/usr/bin/python3
 
 """
-Description: This program is used to interactively manage the festivus C2 server.
+Description: This program is used to interactively manage the Skeletor C2 server.
 """
 
 import requests
@@ -46,9 +46,9 @@ def post_cmd(cmd):
         r = requests.post(f"{URL}/make-task", json=json_data)
 
 def main():
-    print("Festivus C2 Manager\n\n")
+    print("Skeletor C2 Manager\n\n")
     while True:
-        userin = input("Festivus> ")
+        userin = input("Skeletor> ")
         #Process one word commands
         if userin.upper() in ["HELP", "?"]:
             options()
