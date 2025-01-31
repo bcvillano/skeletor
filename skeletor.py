@@ -117,7 +117,7 @@ def register_agent():
 def submit_results():
     try:
         # print(request.json)
-        print(f"IP: {request.json.get('agent_id')}" + "\n" + f"Result: {request.json.get('result')}"+"\n")
+        print(f"\nIP: {request.json.get('agent_id')}" + "\t" + f"Result: {request.json.get('result')}"+"\n")
         data = request.json
         agent_id = data['agent_id']
         task_id = data['task_id']
