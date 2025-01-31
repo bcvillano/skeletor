@@ -2,3 +2,4 @@ flask
 flask-sqlalchemy
 requests
 werkzeug
+argparse
