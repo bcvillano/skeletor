@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 from flask import Flask, request, jsonify, abort, send_from_directory,render_template
 from flask_sqlalchemy import SQLAlchemy
 import requests

@@ -1,0 +1,11 @@
+[Unit]
+Description=Skeletor C2 Server
+After=network.target
+
+[Service]
+ExecStart= /usr/local/bin/skeletor.py
+Type=simple
+Restart=always
+
+[Install]
+WantedBy=default.target
