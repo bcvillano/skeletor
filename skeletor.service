@@ -3,7 +3,7 @@ Description=Skeletor C2 Server
 After=network.target
 
 [Service]
-ExecStart= /usr/local/bin/skeletor.py
+ExecStart= /usr/local/bin/skeletor
 Type=simple
 Restart=always
 
