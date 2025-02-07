@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 from flask import Flask, request, jsonify, abort, send_from_directory,render_template
 from flask_sqlalchemy import SQLAlchemy
 import requests
@@ -10,9 +12,9 @@ from werkzeug.utils import secure_filename
 
 app = Flask(__name__)
 
-#Global Variables:
-UPLOAD_DIR = "uploads"
-SHOW_REQUESTS = False
+
+#Configuration dictionary
+config = {"upload_dir": "uploads", "show_requests": False}
 
 # SQLite database configuration
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///c2.db'
@@ -21,7 +23,7 @@ db = SQLAlchemy(app)
 
 #logging config
 log = logging.getLogger('werkzeug')
-if SHOW_REQUESTS:
+if config['show_requests']:
     log.setLevel(logging.INFO)
 else:
     log.setLevel(logging.ERROR)
@@ -52,9 +54,8 @@ with app.app_context():
 #FUNCTIONS:
 
 def setup():
-    os.makedirs(UPLOAD_DIR, exist_ok=True)
+    os.makedirs(config['upload_dir'], exist_ok=True)
     os.makedirs("files", exist_ok=True)
-
 
 
 def restrict_remote(func): # Decorator to restrict routes to localhost only
@@ -177,7 +178,7 @@ def upload_file():
         file = request.files['file']
         if file.filename == '':
             return jsonify({"error": "No file selected for uploading"}), 400    
-        file.save(os.path.join(UPLOAD_DIR, file.filename))
+        file.save(os.path.join(config['upload_dir'], file.filename))
         return jsonify({"message": "File uploaded successfully!", "filename": file.filename}), 200
     except:
         return jsonify({"error": "Invalid data"}), 400
