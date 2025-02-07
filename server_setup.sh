@@ -17,6 +17,6 @@ chown root:root /usr/local/bin/skeletor
 echo "Setting Up Skeletor Service..."
 mv ./skeletor.service /etc/systemd/system/skeletor.service
 systemctl daemon-reload
-systemctl enable skeletor
+#systemctl enable skeletor
 
 echo "Skeletor installed successfully"
