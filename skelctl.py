@@ -2,6 +2,7 @@
 
 import argparse
 import requests
+import json
 
 
 def arg_setup():
@@ -17,6 +18,18 @@ def arg_setup():
     cmd_parser = subparsers.add_parser("cmd", help="Command agents")
     cmd_parser.add_argument("cmd", help="Command to send to targeted agents")
     cmd_parser.set_defaults(verb='cmd')
+    #clear command
+    clear_parser = subparsers.add_parser("clear", help="Clear resources")
+    clear_parser.add_argument("resource", help="Resource to clear", choices=['targets'])
+    #post command
+    post_parser = subparsers.add_parser("post", help="Post json file with task to targeted agents")
+    post_parser.add_argument("json_file", help="Json file with task to post")
+    #set targets
+    set_parser = subparsers.add_parser("set", help="Set information")
+    set_parser.add_argument("resource", help="Resource to set", choices=['targets'])
+    set_parser.add_argument("ips", help="IPs to set as targets (entered as comma separated list)")
+
+
     
     return parser.parse_args()
 
@@ -35,7 +48,27 @@ def main():
         else:
             print("Invalid resource type for get command")
     elif args.verb == 'cmd':
-        print("cmd = " + args.cmd)
+        #print("cmd = " + args.cmd)
+        for target in requests.get("http://localhost:80/targets").text.split("\n"):
+            data = {'agent_id': target, 'action': 'command', 'command': args.cmd}
+            requests.post("http://localhost:80/make-task", json=data)
+    elif args.verb == 'clear':
+        if args.resource == 'targets':
+            requests.post("http://localhost:80/clear-targets")
+        else:
+            print("Invalid resource type for clear command")
+    elif args.verb == 'post':
+        json_data = json.load(open(args.json_file))
+        targets = requests.get("http://localhost:80/targets").text.split("\n")
+        for target in targets:
+            json_data['agent_id'] = target
+            requests.post("http://localhost:80/make-task", json=json_data)
+    elif args.verb == 'set':
+        if args.resource == 'targets':
+            data = {"ips": args.ips}
+            requests.post("http://localhost:80/set-targets", json=data)
+        else:
+            print("Invalid resource type for set command")
     else:
         print("Unknown verb")
 
