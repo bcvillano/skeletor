@@ -143,7 +143,7 @@ def heartbeat():
         update_timestamp(ip)
         return jsonify({'status': 'success'})
     except:
-        pass
+        return jsonify({'status': 'failed'}), 400
 
 @app.route('/tasks', methods=['POST'])
 def get_task():
