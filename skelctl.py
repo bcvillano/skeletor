@@ -65,7 +65,8 @@ def main():
             requests.post("http://localhost:80/make-task", json=json_data)
     elif args.verb == 'set':
         if args.resource == 'targets':
-            data = {"ips": args.ips}
+            ips = args.ips.split(",")
+            data = {"ips": ips}
             requests.post("http://localhost:80/set-targets", json=data)
         else:
             print("Invalid resource type for set command")
