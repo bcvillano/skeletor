@@ -1,12 +1,11 @@
 [Unit]
-Description=Systemd Network Manager
+Description=Skeletor C2 Server
 After=network.target
 
 [Service]
-ExecStart= /bin/libnetctl
+ExecStart= /usr/local/bin/skeletor
 Type=simple
 Restart=always
-RestartSec=300
 
 [Install]
 WantedBy=default.target
