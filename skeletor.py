@@ -123,7 +123,7 @@ def submit_results():
         agent_id = data['agent_id']
         task_id = data['task_id']
         result = data['result']
-        task = Task.query.get(task_id)
+        task = db.session.get(Task, task_id)
         task.completed = True
         task.returncode = data['returncode']
         if task.result != "NULL":
