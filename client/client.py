@@ -21,20 +21,26 @@ class Client:
                 pass
             time.sleep(120)
 
+    def register(self):
+        data = {'agent_id': self.local_ip}
+        req = requests.post(f"http://{self.server_ip}:{self.port}/register", json=data, timeout=3)
+        assert req.status_code == 201 or req.status_code == 200
+
+
     def run(self):
         heartbeat_thread = threading.Thread(target=self.heartbeat)
         heartbeat_thread.daemon = True
         heartbeat_thread.start()
         try:
-            data = {'agent_id': self.local_ip}
-            req = requests.post(f"http://{self.server_ip}:{self.port}/register", json=data, timeout=3)
-            assert req.status_code == 201 or req.status_code == 200
+            self.register()
         except:
-            pass
-            #print("Failed to register agent (" + self.local_ip + ")")
+            time.sleep(120)
+            self.register()
         while True:
             try:
                 req = requests.post(f"http://{self.server_ip}:{self.port}/tasks", json={'agent_id': self.local_ip}, timeout=3)
+                if req.status_code == 418:
+                    self.register()
                 if req.status_code not in [200, 201, 204]:
                     raise ValueError("Failed to get tasks")
                 elif req.status_code == 204:

