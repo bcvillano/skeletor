@@ -8,10 +8,13 @@ jobs:
   sync:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout repository
+      - name: Checkout full repository
         uses: actions/checkout@v3
-        
+        with:
+          fetch-depth: 0
+
       - name: Push to RITSEC GitLab
         run: |
-          git remote add gitlab https://oauth2:${{ secrets.GITLABSYNC }}@gitlab.ritsec.cloud/redteam/skeletor.git
+          git remote add gitlab https://oauth2:${{ secrets.GITLAB_PAT }}@gitlab.ritsec.cloud/redteam/skeletor.git
           git push --mirror gitlab
+
