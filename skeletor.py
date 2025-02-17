@@ -14,7 +14,7 @@ app = Flask(__name__)
 
 
 #Configuration dictionary
-config = {"upload_dir": "uploads", "show_requests": False,"debug":False}
+config = {"upload_dir": "uploads", "show_requests": True,"debug":True}
 
 # SQLite database configuration
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///c2.db'
