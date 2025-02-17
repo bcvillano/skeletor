@@ -2,7 +2,7 @@ package main
 
 import (
 	"bytes"
-	"encoding/json"
+	// "encoding/json"
 	"fmt"
 	"net"
 	"net/http"
@@ -10,10 +10,6 @@ import (
 	"runtime"
 	"time"
 )
-
-type Heartbeat struct {
-	IP string `json:"ip"`
-}
 
 var (
 	server = "localhost"
@@ -47,11 +43,7 @@ func runcmd(command string) ([]byte, error) {
 
 func heartbeat() {
 	server := "http://" + net.JoinHostPort(server, fmt.Sprintf("%d", port)) + "/heartbeat"
-	heartbeat := Heartbeat{IP: localIP}
-	jsonData, err := json.Marshal(heartbeat)
-	if err != nil {
-		panic(err)
-	}
+	jsonData := []byte(`{"ip":"` + localIP + `"}`)
 	for {
 		request, err := http.NewRequest("POST", server, bytes.NewBuffer(jsonData))
 		if err != nil {

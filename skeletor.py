@@ -138,6 +138,7 @@ def submit_results():
 def heartbeat():
     try:
         data = request.json
+        print(data)
         ip = data['ip']
         if config['debug']:
             print(f"Received heartbeat from {ip}")
