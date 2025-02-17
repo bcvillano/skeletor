@@ -16,5 +16,5 @@ jobs:
       - name: Push to RITSEC GitLab
         run: |
           git remote add gitlab https://oauth2:${{ secrets.GITLABSYNC }}@gitlab.ritsec.cloud/redteam/skeletor.git
-          git push --mirror gitlab
+          git push gitlab
 
