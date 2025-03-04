@@ -185,7 +185,15 @@ def upload_file():
     except:
         return jsonify({"error": "Invalid data"}), 400
 
-
+@app.route('/status', methods=['GET'])
+def status():
+    webpage_content = """
+    <h1>Welcome to Skeletor</h1>
+    <h3>Agent Status</h3>
+    """
+    for agent in Agent.query.all():
+        webpage_content += f"<p>{agent.agent_id} - {agent.status}</p>"
+    return webpage_content
 
 # Localhost only routes for manager
 @app.route('/get-agents', methods=['GET'])
@@ -267,13 +275,7 @@ def make_task():
 #Main Page
 @app.route('/', methods=['GET'])
 def homepage():
-    webpage_content = """
-    <h1>Welcome to Skeletor</h1>
-    <h3>Command and Control</h3>
-    """
-    for agent in Agent.query.all():
-        webpage_content += f"<p>{agent.agent_id} - {agent.status}</p>"
-    return webpage_content
+    return render_template('index.html')
 
 
 def main():
