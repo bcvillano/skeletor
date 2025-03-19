@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-from flask import Flask, request, jsonify, abort, send_from_directory,render_template
+from flask import Flask, request, jsonify, abort, send_from_directory,redirect,url_for
 from flask_sqlalchemy import SQLAlchemy
 import requests
 from datetime import datetime, timezone
@@ -275,7 +275,7 @@ def make_task():
 #Main Page
 @app.route('/', methods=['GET'])
 def homepage():
-    return render_template('index.html')
+    return redirect(url_for('status'))
 
 
 def main():
