@@ -278,6 +278,18 @@ def make_task():
         return jsonify({"message": "Task created successfully"}), 201
     except:
         return jsonify({"error": "Invalid data"}), 400
+    
+@app.route('/get-result', methods=['POST'])
+@restrict_remote
+def get_result():
+    data = request.json
+    agent_id = data.get('agent_id')
+    if agent_id:
+        agent = Agent.query.filter_by(agent_id=agent_id).first()
+        if agent:
+            return jsonify({"command":agent.last_command,"result": agent.last_result}), 200
+        return jsonify({"error": "Agent not found"}), 404
+    return jsonify({"error": "Invalid data"}), 400
 
 #Main Page
 @app.route('/', methods=['GET'])

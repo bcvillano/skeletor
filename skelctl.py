@@ -28,8 +28,9 @@ def arg_setup():
     set_parser = subparsers.add_parser("set", help="Set information")
     set_parser.add_argument("resource", help="Resource to set", choices=['targets'])
     set_parser.add_argument("ips", help="IPs to set as targets (entered as comma separated list)")
-
-
+    #result command
+    result_parser = subparsers.add_parser("result", help="Get results")
+    result_parser.add_argument("agent_id", help="ID of agent to get results from")
     
     return parser.parse_args()
 
@@ -70,8 +71,13 @@ def main():
             requests.post("http://localhost:80/set-targets", json=data)
         else:
             print("Invalid resource type for set command")
+    elif args.verb in ["result","results"]:
+        data = {"agent_id": args.agent_id}
+        result = requests.post("http://localhost:80/get-result", json=data).json()
+        result_str = "\n" + "Agent: " + args.agent_id + "\n" + "Command: " + result.get('command') + "\n" + "Output: " + result.get('output') + "\n"
+        print(result_str)
     else:
-        print("Unknown verb")
+        print("Missing agent ID")
 
 if __name__ == '__main__':
     main()
