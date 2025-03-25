@@ -70,12 +70,12 @@ class Client:
                     time.sleep(120)
                     continue
                 tasks = req.json()
-                self.handle_task(tasks)
                 if req.status_code not in [200, 201]:
                     raise ValueError("Failed to get tasks")
                 if req.text == "NULL":
                     time.sleep(120)
                     continue
+                self.handle_task(tasks)
             except Exception as e:
                 pass
                 #print(e)

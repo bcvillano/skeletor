@@ -169,7 +169,8 @@ def get_task():
             db.session.commit()
             return jsonify(task_data),200
         return jsonify({"status": "No tasks"}), 204
-    return jsonify({"status": "Must re-register"}), 418
+    else:
+        return jsonify({"status": "Must re-register"}), 418 #If agent_id isn't in database, tell the client to re-register
 
 @app.route('/download/<filename>', methods=['GET'])
 def download_file(filename):
