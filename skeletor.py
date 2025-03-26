@@ -157,6 +157,8 @@ def get_task():
     #agent_id = request.args.get('agent_id')
     if ip:
         agent = Agent.query.filter_by(agent_id=ip).first()
+        if agent is None:
+            return jsonify({"status": "Must re-register"}), 418 #If agent_id isn't in database, tell the client to re-register
         task = Task.query.filter_by(agent_id=ip, completed=False).first()
         if task:
             task_data = {
@@ -170,7 +172,8 @@ def get_task():
             return jsonify(task_data),200
         return jsonify({"status": "No tasks"}), 204
     else:
-        return jsonify({"status": "Must re-register"}), 418 #If agent_id isn't in database, tell the client to re-register
+        return jsonify({"status": "Invalid data"}), 400
+        
 
 @app.route('/download/<filename>', methods=['GET'])
 def download_file(filename):
