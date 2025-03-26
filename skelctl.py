@@ -74,7 +74,7 @@ def main():
     elif args.verb in ["result","results"]:
         data = {"agent_id": args.agent_id}
         result = requests.post("http://localhost:80/get-result", json=data).json()
-        result_str = "\n" + "Agent: " + args.agent_id + "\n" + "Command: " + result.get('command') + "\n" + "Output: " + result.get('output') + "\n"
+        result_str = "\n" + "Agent: " + args.agent_id + "\n" + "Command: " + result.get('command') + "\n" + "Result: " + result.get('result') + "\n"
         print(result_str)
     else:
         print("Missing agent ID")
