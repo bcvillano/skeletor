@@ -3,15 +3,18 @@ import socket
 import time
 import threading
 import subprocess
+import platform
 
 class Client:
 
     def __init__(self,server_ip, port):
         self.server_ip = server_ip
         self.port = port
-        self.local_ip = socket.gethostbyname(socket.gethostname())
+        if platform.system() == "Linux":
+            self.local_ip = subprocess.run("hostname -I | awk '{print $1}'", shell=True, capture_output=True, text=True).stdout.strip()
+        else:
+            self.local_ip = socket.gethostbyname(socket.gethostname())
         
-
     def heartbeat(self):
         while True:
             try:
