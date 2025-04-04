@@ -88,7 +88,7 @@ class Client:
             time.sleep(120)
 
 def main():
-    client = Client("festivus.red", 80)
+    client = Client("10.50.0.12", 80)
     client.run()
 
 if __name__ == '__main__':
