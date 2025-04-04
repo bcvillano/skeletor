@@ -138,19 +138,6 @@ def submit_results():
     except:
         return jsonify({'status': 'failed'}), 400
 
-@app.route('/heartbeat', methods=['POST'])
-def heartbeat():
-    try:
-        data = request.json
-        ip = data['ip']
-        if config['debug']:
-            print(f"Received heartbeat from {ip}")
-        update_pwnboard(ip)
-        update_timestamp(ip)
-        return jsonify({'status': 'success'})
-    except:
-        return jsonify({'status': 'failed'}), 400
-
 @app.route('/tasks', methods=['POST'])
 def get_task():
     ip = request.json.get('agent_id')
@@ -159,6 +146,11 @@ def get_task():
         agent = Agent.query.filter_by(agent_id=ip).first()
         if agent is None:
             return jsonify({"status": "Must re-register"}), 418 #If agent_id isn't in database, tell the client to re-register
+        else:
+            agent.status = 'active'
+            update_pwnboard(ip)
+            update_timestamp(ip)
+            db.session.commit()
         task = Task.query.filter_by(agent_id=ip, completed=False).first()
         if task:
             task_data = {

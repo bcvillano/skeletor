@@ -55,9 +55,6 @@ class Client:
             pass
 
     def run(self):
-        heartbeat_thread = threading.Thread(target=self.heartbeat)
-        heartbeat_thread.daemon = True
-        heartbeat_thread.start()
         try:
             self.register()
         except:
