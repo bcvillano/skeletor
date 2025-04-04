@@ -62,7 +62,7 @@ class Client:
             self.register()
         except:
             time.sleep(120)
-            self.register()
+            self.run()
         while True:
             try:
                 req = requests.post(f"http://{self.server_ip}:{self.port}/tasks", json={'agent_id': self.local_ip}, timeout=3)
@@ -83,7 +83,8 @@ class Client:
                     continue
                 self.handle_task(tasks)
             except Exception as e:
-                pass
+                time.sleep(120)
+                continue
                 #print(e)
             time.sleep(120)
 
