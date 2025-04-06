@@ -40,7 +40,7 @@ class Client:
             else:
                 raise ValueError("Invalid task type")
         except subprocess.CalledProcessError as e:
-                data = {'task_id': task_id, 'result': e.stderr,'returncode': e.returncode}
+                data = {'agent_id':self.local_ip,'task_id': task_id, 'result': e.stderr,'returncode': e.returncode}
                 req = requests.post(f"http://{self.server_ip}:{self.port}/results", json=data)
         except Exception as e:
             pass

