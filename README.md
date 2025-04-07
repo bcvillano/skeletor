@@ -1,6 +1,6 @@
 # Skeletor
 
-Skeletor is a HTTP C2 (command and control) client/server application built upon the Flask framework designed for red vs. blue cyber security competitions.  
+Skeletor is a HTTP C2 built upon the Flask framework designed for red vs. blue cyber security competitions.  
 Skeletor clients communicate on a beaconing system, sending outbound POST requests to the Skeletor server's **/tasks** route every 120 seconds containing JSON data in the format:
 ```json
 {
