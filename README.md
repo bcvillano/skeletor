@@ -1,6 +1,6 @@
 # Skeletor
 
-Skeletor is a HTTP C2 built upon the Flask framework designed for red vs. blue cyber security competitions.  
+Skeletor is a HTTP C2 built upon the Flask framework designed for red vs. blue cyber security competitions.
 Skeletor clients communicate on a beaconing system, sending outbound POST requests to the Skeletor server's **/tasks** route every 120 seconds containing JSON data in the format:
 ```json
 {
@@ -8,7 +8,7 @@ Skeletor clients communicate on a beaconing system, sending outbound POST reques
 }
 ```  
 where agent_id is typically the local ip address of the agent, which is important for allowing us to see the local ip for identifying boxes in many red vs blue competitions. Optionally, agent_id could have 
-a different identifier, depending on how you wish to identify different agents. 
+a different identifier, depending on how you wish to identify different agents. If there are one or more tasks assigned to them, this will retrieve the first task, which they will then handle and return the result back to the server.
 
 # Tasks
 Tasks are Skeletor's way of assigning work to clients. When a client send a POST request to the server's **/tasks** route containing there agent_id, if a task exists with a matching agent_id and a completed field with a value of False, 
