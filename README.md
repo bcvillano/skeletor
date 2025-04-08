@@ -36,4 +36,12 @@ where task_id is assigned by the server to the task when it is created to keep t
 In future updates, the download and update actions are planned to be added, which will allow client to download files from the server and exfiltrate files.
 
 # Usage
-Currently, the skelctl command line utility is the primary way of interacting with the skeletor server.  
+## Server
+Currently, the skelctl command line utility is the primary way of interacting with the skeletor server. 
+## Client
+To use the client, make any configuration changes needed in the main function and run the python file, and it will begin beaconing out. There will soon be a Go client, it is currently in development but is not yet stable. The client has three configurable arguments when creating an instance of the Client class: server_ip (mandatory, the IP or FQDN of the host the server is running on), port (port the server is listening on, defaults to 80), and callback_interval (the interval, in seconds, of how often the client should beacon out. Default is 120). The following codeblock illustrates what the main function of client.py looks like when specifying all arguments to the client.
+```python
+def main():
+    client = Client(server_ip="thisisac2.xyz", port=80,callback_interval=120)
+    client.run()
+```
