@@ -18,7 +18,7 @@ the client receives a JSON object in the form:
   "action": "command||download||upload",
   "command": "NULL||command",
   "filename": "NULL||filename",
-  "destination": "NULL||destination"
+  "task_id": 99
 }
 ```
 Currently, the only supported action for Skeletor clients is command, where the agents will execute the command via bash for Linux systems and Powershell for Windows systems, then return a JSON object in the
