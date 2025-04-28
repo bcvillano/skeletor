@@ -11,7 +11,7 @@ where agent_id is typically the local ip address of the agent, which is importan
 a different identifier, depending on how you wish to identify different agents. If there are one or more tasks assigned to them, this will retrieve the first task, which they will then handle and return the result back to the server.
 
 # Tasks
-Tasks are Skeletor's way of assigning work to clients. When a client send a POST request to the server's **/tasks** route containing there agent_id, if a task exists with a matching agent_id and a completed field with a value of False, 
+Tasks are Skeletor's way of assigning work to clients. When a client send a POST request to the server's **/tasks** route containing their agent_id, if a task exists with a matching agent_id and a completed field with a value of False, 
 the client receives a JSON object in the form:
 ```json
 {
