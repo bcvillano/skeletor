@@ -1,95 +1,87 @@
-#!/usr/bin/python3
+#!/usr/bin/env python3
 
-"""
-Description: This program is used to interactively manage the Skeletor C2 server.
-"""
+import requests, json
 
-import requests
-import json
+URL = "http://127.0.0.1:80"
 
-URL = "http://localhost:80"
+def skeletor_banner():
+    try:
+        with open("banner.txt", "r",encoding='utf-8') as f:
+            banner = f.read()
+            print(banner)
+    except FileNotFoundError:
+        pass
 
-def options():
-    print("SHOW AGENTS\tList all agents")
-    print("SHOW TARGETS\tList targeted agents")
-    print("TARGET <IP(s)>\tSet specified IPs as targets (IPs should be comma separated)")
-    print("UNTARGET <IP(s)>\tRemove specified IPs as targets (IPs should be comma separated)")
-    print("CLEAR TARGETS\tRemove all targets")
-    print("POST TASK <JSON FILE>\tPost task from specified json file to all targeted agents")
 
-def set_targets(ips):
-    data = {"ips": ips}
-    r = requests.post(f"{URL}/set-targets", json=data)
+def menu():
+    print("1. Get Agent Status")
+    print("2. Issue a Command")
+    print("3. Get Result from Agent")    
+    print("4. Exit")
 
-def get_targets():
-    r = requests.get(f"{URL}/targets")
-    return [target for target in r.text.split("\n") if target.strip()]
+def exit_manager():
+    print("Exiting...")
+    exit(0)
 
-def untarget(ips):
-    data = {"ips": ips}
-    r = requests.post(f"{URL}/untarget", json=data)
+def get_agent_status():
+    try:
+        agents = requests.get(URL + "/get-agents").json()
+    except requests.exceptions.RequestException as e:
+        print(f"Error: {e}")
+        return 
+    if agents:
+        for agent in agents:
+            print(f"Agent ID: {agent['agent_id']}")
+            print(f"Agent Status: {agent['status']}")
+            
+def send_cmd():
+    requests.post(URL + "/clear-targets")
+    command = input("Command: ")
+    if command.strip() == "":
+        print("Command cannot be empty.")
+        return
+    targets = input("Command Targets (comma separated) (Use * for all): ")
+    if targets == "*":
+        targets = []
+        for agent in requests.get(URL + "/get-agents").json():
+            targets.append(agent['agent_id'])
+        requests.post(URL + "/set-targets", json={"ips": targets})
+    else:
+        targets = targets.strip().split(",")
+        if "x" in targets:
+            x_val = input("Number of teams: ")
+            targets = targets.replace("x", x_val)
+            print(f"Targets: {targets}")
+            confirm = input("Confirm (y/n): ")
+            if confirm.lower() != "y" and confirm.lower() != "yes":
+                print("Command not sent.")
+                return
+            targets = targets.strip().split(",")
+            requests.post(URL + "/set-targets", json={"ips": targets})
+        else:
+            pass
+    requests.post() # FINISH THIS LINE
+    requests.post(URL + "/clear-targets")
 
-def clear_targets():
-    r = requests.post(f"{URL}/clear-targets")
-
-def post_task(json_filename):
-    with open(json_filename, "r") as f:
-        json_data = json.load(f)
-        for target in get_targets():
-            json_data['agent_id'] = target
-            r = requests.post(f"{URL}/make-task", json=json_data)
-
-def post_cmd(cmd):
-    json_data = {"action": "command","command": cmd}
-    for target in get_targets():
-        json_data['agent_id'] = target
-        r = requests.post(f"{URL}/make-task", json=json_data)
+def get_result():
+    pass
 
 def main():
-    print("Skeletor C2 Manager\n\n")
+    skeletor_banner()
     while True:
-        userin = input("Skeletor> ")
-        #Process one word commands
-        if userin.upper() in ["HELP", "?"]:
-            options()
-            continue
-        #Process multi-word commands
-        splits = userin.split(" ")
-        #Show related commands
-        if userin.upper().strip() == "SHOW AGENTS":
-            r = requests.get(f"{URL}/get-agents")
-            agents = r.json()
-            print("Agents:")
-            for agent in agents:
-                print(f"{agent['agent_id']} - {agent['status']}")
-        elif userin.upper().strip() == "SHOW TARGETS":
-            targets = get_targets()
-            print("Targets:")
-            for target in targets:
-                print(target)
-        #Targeting related commands
-        elif splits[0].upper() == "TARGET":
-            ips = splits[1].split(",")
-            set_targets(ips)
-        elif splits[0].upper() == "UNTARGET":
-            ips = splits[1].split(",")
-            untarget(ips)
-        elif userin.upper().strip() == "CLEAR TARGETS":
-            clear_targets()
-        elif splits[0].upper() == "POST" and splits[1].upper() == "TASK":
-            userin = userin.upper()
-            post_task(userin.removeprefix("POST TASK "))
-        elif splits[0].upper() == "CMD":
-            command = userin[4:].strip()
-            post_cmd(command)
-        elif userin.upper().strip() in ["QUIT", "EXIT","Q"]:
-            quit()
+        menu()
+        userin = input(": ").strip()
+        options = {
+            "1": get_agent_status,
+            "2": send_cmd,
+            "3": get_result,
+            "4": exit_manager,
+        }
+        if userin in options:
+            options[userin]()
         else:
-            print("Invalid command")
-            options()
-
+            print("Invalid option. Please try again.")
         
-
 
 if __name__ == "__main__":
     main()
