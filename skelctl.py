@@ -51,8 +51,9 @@ def main():
     elif args.verb == 'cmd':
         #print("cmd = " + args.cmd)
         for target in requests.get("http://localhost:80/targets").text.split("\n"):
-            data = {'agent_id': target, 'action': 'command', 'command': args.cmd}
-            requests.post("http://localhost:80/make-task", json=data)
+            if target.strip() != "":
+                data = {'agent_id': target, 'action': 'command', 'command': args.cmd}
+                requests.post("http://localhost:80/make-task", json=data)
     elif args.verb == 'clear':
         if args.resource == 'targets':
             requests.post("http://localhost:80/clear-targets")

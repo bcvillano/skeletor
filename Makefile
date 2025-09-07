@@ -22,7 +22,7 @@ agent-linux:
 
 agent-windows:
 	echo "Compiling Windows binary"
-	env GOOS=windows GOARCH=amd64 go build ${WIN-FLAGS} -o ${DIRECTORY}/${WIN} ./client/go/main.go
+	env GOOS=windows GOARCH=amd64 go build ${WIN-FLAGS} -o ${DIRECTORY}/${WIN} ./client/go/windows.go
 
 agent-rasp:
 	echo "Compiling ARM binary"
