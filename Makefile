@@ -7,7 +7,7 @@ BSD=bsd-agent.bin
 FLAGS=-ldflags "-s -w"
 WIN-FLAGS=-ldflags -H=windowsgui
 
-all: clean create-directory agent-linux agent-windows agent-mac agent-fuckbsd agent-rasp
+all: clean create-directory agent-linux agent-windows agent-mac agent-freebsd agent-rasp
 
 create-directory:
 	mkdir ${DIRECTORY}
