@@ -61,7 +61,7 @@ def send_cmd():
         else:
             pass
     for target in requests.get("http://localhost:80/targets").text.split("\n"):
-            data = {'agent_id': target, 'action': 'command', 'command': args.cmd}
+            data = {'agent_id': target, 'action': 'command', 'command': command.strip()}
             requests.post("http://localhost:80/make-task", json=data)
     requests.post(URL + "/clear-targets")
 
