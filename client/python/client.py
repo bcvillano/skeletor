@@ -75,7 +75,7 @@ class Client:
                 #print(e)
 
 def main():
-    client = Client("thisisac2.xyz")
+    client = Client("localhost",callback_interval=15)
     client.run()
 
 if __name__ == '__main__':

