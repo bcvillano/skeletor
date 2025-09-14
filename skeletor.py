@@ -2,6 +2,7 @@
 
 from flask import Flask, request, jsonify, abort, send_from_directory,redirect,url_for
 from flask_sqlalchemy import SQLAlchemy
+from werkzeug.exceptions import NotFound
 import requests
 from datetime import datetime, timezone
 import time
@@ -173,7 +174,7 @@ def download_file(filename):
     safe_filename = secure_filename(filename)  # Prevent directory traversal
     try:
         return send_from_directory("files", safe_filename, as_attachment=True)
-    except FileNotFoundError:
+    except NotFound:
         return jsonify({"error": "File not found"}), 404
     
 @app.route('/upload', methods=['POST'])
