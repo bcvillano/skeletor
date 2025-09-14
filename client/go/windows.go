@@ -129,7 +129,9 @@ func main(){
 	for {
 		err := agent.Register()
 		if err != nil {
-			fmt.Println("Error registering agent:", err)
+			//fmt.Println("Error registering agent:", err)
+			time.Sleep(agent.CallbackInterval)
+			continue
 		}
 		break
 	}
