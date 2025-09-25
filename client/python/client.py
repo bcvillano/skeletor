@@ -36,8 +36,6 @@ class Client:
                 req = requests.post(f"http://{self.server_ip}:{self.port}/results", json=data)
             elif task == "download":
                 pass
-            elif task == "upload":
-                pass
             else:
                 raise ValueError("Invalid task type")
         except subprocess.CalledProcessError as e:
