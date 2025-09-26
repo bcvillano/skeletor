@@ -13,9 +13,8 @@ from werkzeug.utils import secure_filename
 
 app = Flask(__name__)
 
-
 #Configuration dictionary
-config = {"upload_dir": "uploads", "show_requests": True,"debug":False,"pwnboard":True,"pwnboard_url":"https://margs.salsas.bar/pwn/boxaccess"}
+config = {"upload_dir": "uploads", "show_requests": True,"debug":False,"pwnboard":True,"pwnboard_url":"https://margs.salsas.bar/pwn/boxaccess","allowed_ips":["127.0.0.1","::1"]}
 
 # SQLite database configuration
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///c2.db'
@@ -57,13 +56,18 @@ with app.app_context():
 #FUNCTIONS:
 
 def setup():
+    ip_environment_variable = os.getenv('SKELETOR_ALLOWED_IPS', "") #Defaults to empty string
+    if ip_environment_variable != "":
+        for ip in ip_environment_variable.split(","):
+            config["allowed_ips"].append(ip.strip())
+    print(config["allowed_ips"])
     os.makedirs(config['upload_dir'], exist_ok=True)
     os.makedirs("files", exist_ok=True)
 
 
 def restrict_remote(func): # Decorator to restrict routes to localhost only
     def wrapper(*args, **kwargs):
-        if request.remote_addr not in ['127.0.0.1',"::1"]:
+        if request.remote_addr not in config["allowed_ips"]:
             abort(403)
         return func(*args, **kwargs)
     wrapper.__name__ = func.__name__  # To preserve function name for Flask routing
