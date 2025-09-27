@@ -295,6 +295,18 @@ def get_result():
         return jsonify({"error": "Agent not found"}), 404
     return jsonify({"error": "Invalid data"}), 400
 
+@app.route('/get-agent',methods=["POST"])
+@restrict_remote
+def get_agent():
+    data = request.json
+    agent_id = data.get('agent_id')
+    if agent_id:
+        agent = Agent.query.filter_by(agent_id=agent_id).first()
+        if agent:
+            return jsonify({"status":agent.status,"targeted":agent.targeted,"last_seen":agent.last_seen,"last_command":agent.last_command,"last_result":agent.last_result,"callbacks":agent.callbacks}), 200
+        return jsonify({"error": "Agent not found"}), 404
+    return jsonify({"error": "Invalid data"}), 400
+
 #Main Page
 @app.route('/', methods=['GET'])
 def homepage():
