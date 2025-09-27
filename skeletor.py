@@ -28,6 +28,13 @@ if config['show_requests'] or config['debug']:
 else:
     log.setLevel(logging.ERROR)
 
+# Association table: connects agents <-> tags
+agent_tags = db.Table('agent_tags',db.Column('agent_id', db.Integer, db.ForeignKey('agent.id'), primary_key=True),db.Column('tag_id', db.Integer, db.ForeignKey('tag.id'), primary_key=True))
+
+class Tag(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(100), unique=True, nullable=False)
+
 # Database models
 class Agent(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -38,6 +45,11 @@ class Agent(db.Model):
     last_command = db.Column(db.String(5000), nullable=True,default="NULL")
     last_result = db.Column(db.String(10000), nullable=True,default="NULL")
     callbacks = db.Column(db.Integer, nullable=False, default=0)
+    tags = db.relationship(
+        'Tag',
+        secondary=agent_tags,
+        backref=db.backref('agents', lazy='dynamic')
+    )
 
 class Task(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -306,6 +318,67 @@ def get_agent():
             return jsonify({"status":agent.status,"targeted":agent.targeted,"last_seen":agent.last_seen,"last_command":agent.last_command,"last_result":agent.last_result,"callbacks":agent.callbacks}), 200
         return jsonify({"error": "Agent not found"}), 404
     return jsonify({"error": "Invalid data"}), 400
+
+@app.route('/tag-agent',methods=["POST"])
+@restrict_remote
+def tag_agent():
+    data = request.json
+    agent_id = data.get('agent_id')
+    tags = data.get('tags') #Tags should be comma seperated list of tags
+    if not agent_id or not tags:
+        return jsonify({"error": "agent_id and tags are required"}), 400
+    agent = Agent.query.filter_by(agent_id=agent_id).first()
+    if not agent:
+        return jsonify({"error": f"Agent {agent_id} not found"}), 404
+    tag_names = [t.strip() for t in tags.split(",") if t.strip()]
+    added_tags = []
+    for tag_name in tag_names:
+        # Check if tag exists, otherwise create it
+        tag = Tag.query.filter_by(name=tag_name).first()
+        if not tag:
+            tag = Tag(name=tag_name)
+            db.session.add(tag)
+            db.session.flush()  # make sure tag.id exists before linking
+        # Link tag to agent if not already linked
+        if tag not in agent.tags:
+            agent.tags.append(tag)
+            added_tags.append(tag_name)
+    db.session.commit()
+    return jsonify({"agent_id": agent.agent_id,"added_tags": added_tags,"all_tags": [t.name for t in agent.tags]}), 200
+
+@app.route('/remove-tag', methods=["POST"])
+@restrict_remote
+def remove_tag():
+    data = request.json
+    agent_id = data.get('agent_id')
+    tags = data.get('tags')  # comma-separated list
+    if not agent_id or not tags:
+        return jsonify({"error": "agent_id and tags are required"}), 400
+    agent = Agent.query.filter_by(agent_id=agent_id).first()
+    if not agent:
+        return jsonify({"error": f"Agent {agent_id} not found"}), 404
+    tag_names = [t.strip() for t in tags.split(",") if t.strip()]
+    removed_tags = []
+    for tag_name in tag_names:
+        tag = Tag.query.filter_by(name=tag_name).first()
+        if tag and tag in agent.tags:
+            agent.tags.remove(tag)
+            removed_tags.append(tag_name)
+    db.session.commit()
+    return jsonify({"agent_id": agent.agent_id,"removed_tags": removed_tags,"all_tags": [t.name for t in agent.tags]}), 200
+
+@app.route('/tagged', methods=["POST"])
+@restrict_remote
+def tagged():
+    data = request.json
+    tag_name = data.get('tag')
+    if not tag_name:
+        return jsonify({"error": "tag is required"}), 400
+    tag = Tag.query.filter_by(name=tag_name).first()
+    if not tag:
+        return jsonify({"error": f"Tag '{tag_name}' not found"}), 404
+    agent_ids = [agent.agent_id for agent in tag.agents]
+    return jsonify({"agents": agent_ids}), 200
 
 #Main Page
 @app.route('/', methods=['GET'])
