@@ -37,6 +37,7 @@ class Agent(db.Model):
     last_seen = db.Column(db.DateTime, default=datetime.now(tz=timezone.utc))
     last_command = db.Column(db.String(5000), nullable=True,default="NULL")
     last_result = db.Column(db.String(10000), nullable=True,default="NULL")
+    callbacks = db.Column(db.Integer, nullable=False, default=0)
 
 class Task(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -154,6 +155,7 @@ def get_task():
             return jsonify({"status": "Must re-register"}), 418 #If agent_id isn't in database, tell the client to re-register
         else:
             agent.status = 'active'
+            agent.callbacks += 1
             update_pwnboard(ip)
             update_timestamp(ip)
             db.session.commit()
