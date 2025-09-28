@@ -13,9 +13,8 @@ from werkzeug.utils import secure_filename
 
 app = Flask(__name__)
 
-
 #Configuration dictionary
-config = {"upload_dir": "uploads", "show_requests": True,"debug":False,"pwnboard":True,"pwnboard_url":"https://margs.salsas.bar/pwn/boxaccess"}
+config = {"upload_dir": "uploads", "show_requests": True,"debug":False,"pwnboard":True,"pwnboard_url":"https://margs.salsas.bar/pwn/boxaccess","allowed_ips":["127.0.0.1","::1"]}
 
 # SQLite database configuration
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///c2.db'
@@ -29,6 +28,13 @@ if config['show_requests'] or config['debug']:
 else:
     log.setLevel(logging.ERROR)
 
+# Association table: connects agents <-> tags
+agent_tags = db.Table('agent_tags',db.Column('agent_id', db.Integer, db.ForeignKey('agent.id'), primary_key=True),db.Column('tag_id', db.Integer, db.ForeignKey('tag.id'), primary_key=True))
+
+class Tag(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(100), unique=True, nullable=False)
+
 # Database models
 class Agent(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -38,6 +44,12 @@ class Agent(db.Model):
     last_seen = db.Column(db.DateTime, default=datetime.now(tz=timezone.utc))
     last_command = db.Column(db.String(5000), nullable=True,default="NULL")
     last_result = db.Column(db.String(10000), nullable=True,default="NULL")
+    callbacks = db.Column(db.Integer, nullable=False, default=0)
+    tags = db.relationship(
+        'Tag',
+        secondary=agent_tags,
+        backref=db.backref('agents', lazy='dynamic')
+    )
 
 class Task(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -57,13 +69,18 @@ with app.app_context():
 #FUNCTIONS:
 
 def setup():
+    ip_environment_variable = os.getenv('SKELETOR_ALLOWED_IPS', "") #Defaults to empty string
+    if ip_environment_variable != "":
+        for ip in ip_environment_variable.split(","):
+            config["allowed_ips"].append(ip.strip())
+    print(config["allowed_ips"])
     os.makedirs(config['upload_dir'], exist_ok=True)
     os.makedirs("files", exist_ok=True)
 
 
 def restrict_remote(func): # Decorator to restrict routes to localhost only
     def wrapper(*args, **kwargs):
-        if request.remote_addr not in ['127.0.0.1',"::1"]:
+        if request.remote_addr not in config["allowed_ips"]:
             abort(403)
         return func(*args, **kwargs)
     wrapper.__name__ = func.__name__  # To preserve function name for Flask routing
@@ -150,6 +167,7 @@ def get_task():
             return jsonify({"status": "Must re-register"}), 418 #If agent_id isn't in database, tell the client to re-register
         else:
             agent.status = 'active'
+            agent.callbacks += 1
             update_pwnboard(ip)
             update_timestamp(ip)
             db.session.commit()
@@ -288,6 +306,79 @@ def get_result():
             return jsonify({"command":agent.last_command,"result": agent.last_result}), 200
         return jsonify({"error": "Agent not found"}), 404
     return jsonify({"error": "Invalid data"}), 400
+
+@app.route('/get-agent',methods=["POST"])
+@restrict_remote
+def get_agent():
+    data = request.json
+    agent_id = data.get('agent_id')
+    if agent_id:
+        agent = Agent.query.filter_by(agent_id=agent_id).first()
+        if agent:
+            return jsonify({"status":agent.status,"targeted":agent.targeted,"last_seen":agent.last_seen,"last_command":agent.last_command,"last_result":agent.last_result,"callbacks":agent.callbacks}), 200
+        return jsonify({"error": "Agent not found"}), 404
+    return jsonify({"error": "Invalid data"}), 400
+
+@app.route('/tag-agent',methods=["POST"])
+@restrict_remote
+def tag_agent():
+    data = request.json
+    agent_id = data.get('agent_id')
+    tags = data.get('tags') #Tags should be comma seperated list of tags
+    if not agent_id or not tags:
+        return jsonify({"error": "agent_id and tags are required"}), 400
+    agent = Agent.query.filter_by(agent_id=agent_id).first()
+    if not agent:
+        return jsonify({"error": f"Agent {agent_id} not found"}), 404
+    tag_names = [t.strip() for t in tags.split(",") if t.strip()]
+    added_tags = []
+    for tag_name in tag_names:
+        # Check if tag exists, otherwise create it
+        tag = Tag.query.filter_by(name=tag_name).first()
+        if not tag:
+            tag = Tag(name=tag_name)
+            db.session.add(tag)
+            db.session.flush()  # make sure tag.id exists before linking
+        # Link tag to agent if not already linked
+        if tag not in agent.tags:
+            agent.tags.append(tag)
+            added_tags.append(tag_name)
+    db.session.commit()
+    return jsonify({"agent_id": agent.agent_id,"added_tags": added_tags,"all_tags": [t.name for t in agent.tags]}), 200
+
+@app.route('/remove-tag', methods=["POST"])
+@restrict_remote
+def remove_tag():
+    data = request.json
+    agent_id = data.get('agent_id')
+    tags = data.get('tags')  # comma-separated list
+    if not agent_id or not tags:
+        return jsonify({"error": "agent_id and tags are required"}), 400
+    agent = Agent.query.filter_by(agent_id=agent_id).first()
+    if not agent:
+        return jsonify({"error": f"Agent {agent_id} not found"}), 404
+    tag_names = [t.strip() for t in tags.split(",") if t.strip()]
+    removed_tags = []
+    for tag_name in tag_names:
+        tag = Tag.query.filter_by(name=tag_name).first()
+        if tag and tag in agent.tags:
+            agent.tags.remove(tag)
+            removed_tags.append(tag_name)
+    db.session.commit()
+    return jsonify({"agent_id": agent.agent_id,"removed_tags": removed_tags,"all_tags": [t.name for t in agent.tags]}), 200
+
+@app.route('/tagged', methods=["POST"])
+@restrict_remote
+def tagged():
+    data = request.json
+    tag_name = data.get('tag')
+    if not tag_name:
+        return jsonify({"error": "tag is required"}), 400
+    tag = Tag.query.filter_by(name=tag_name).first()
+    if not tag:
+        return jsonify({"error": f"Tag '{tag_name}' not found"}), 404
+    agent_ids = [agent.agent_id for agent in tag.agents]
+    return jsonify({"agents": agent_ids}), 200
 
 #Main Page
 @app.route('/', methods=['GET'])

