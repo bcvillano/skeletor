@@ -44,6 +44,7 @@ class Manager(App):
 
     BINDINGS = [
         ("r", "refresh_agents", "Refresh Agents"),
+        ('b',"show_menu","Back to Menu")
     ]
 
     def compose(self) -> ComposeResult:
@@ -100,10 +101,11 @@ class Manager(App):
         
         if agents:
             for agent in agents:
+                tags_str = ",".join(agent["tags"]) if agent["tags"] else ""
                 table.add_row(
                     agent["agent_id"],
                     agent["status"],
-                    agent["tags"],
+                    tags_str,
                     agent["last_seen"],
                     agent["callbacks"]
                 )
@@ -129,11 +131,21 @@ class Manager(App):
         """Return to the main menu."""
         self.query_one("#agent-display").add_class("hidden")
         self.query_one("#menu-container").remove_class("hidden")
+        self.query_one(OptionList).focus()
+
 
     def action_refresh_agents(self) -> None:
         """Refresh agent list when 'r' is pressed."""
         if not self.query_one("#agent-display").has_class("hidden"):
             self.fetch_agents()
+
+    def action_show_menu(self) -> None:
+        """Return to the main menu."""
+        self.query_one("#agent-display").add_class("hidden")
+        self.query_one("#menu-container").remove_class("hidden")
+        self.show_menu()
+
+
 
 
 if __name__ == "__main__":
