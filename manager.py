@@ -7,7 +7,7 @@ from textual.widgets.option_list import Option
 import requests
 import json
 
-SKELETOR_IP="localhost"
+SKELETOR_IP="127.0.0.1"
 SKELETOR_PORT="80"
 
 class Manager(App):
