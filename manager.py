@@ -42,9 +42,13 @@ class Manager(App):
     }
     """
 
+    BINDINGS = [
+        ("r", "refresh_agents", "Refresh Agents"),
+    ]
+
     def compose(self) -> ComposeResult:
         with Container(id="menu-container"):
-            yield Static("Main Menu", id="title")
+            yield Static("Skeletor", id="title")
             yield OptionList(
                 Option("Get Agent Status",id="status"),
                 Option("Issue A Command",id="cmd"),
@@ -66,11 +70,14 @@ class Manager(App):
         
         table = self.query_one(DataTable)
         if not table.columns:
-            table.add_column("Agent ID", width=30)
-            table.add_column("Status", width=20)
+            table.add_column("Agent ID", width=15)
+            table.add_column("Status", width=10)
+            table.add_column("Tags",width=45)
+            table.add_column("Last Seen",width=20)
+            table.add_column("Callbacks",width=10)
         
         table.clear()
-        table.add_row("Loading...", "Please wait")
+        table.add_row("Loading...", "Please wait","","","")
         
         # Fetch data in background
         self.fetch_agents()
@@ -95,7 +102,10 @@ class Manager(App):
             for agent in agents:
                 table.add_row(
                     agent["agent_id"],
-                    agent["status"]
+                    agent["status"],
+                    agent["tags"],
+                    agent["last_seen"],
+                    agent["callbacks"]
                 )
         else:
             table.add_row("Error", error)
@@ -119,6 +129,11 @@ class Manager(App):
         """Return to the main menu."""
         self.query_one("#agent-display").add_class("hidden")
         self.query_one("#menu-container").remove_class("hidden")
+
+    def action_refresh_agents(self) -> None:
+        """Refresh agent list when 'r' is pressed."""
+        if not self.query_one("#agent-display").has_class("hidden"):
+            self.fetch_agents()
 
 
 if __name__ == "__main__":

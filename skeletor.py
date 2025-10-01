@@ -223,8 +223,17 @@ def status():
 @restrict_remote
 def get_agents():
     agents = Agent.query.all()
-    agents = [{"agent_id": agent.agent_id, "status": agent.status} for agent in agents]
-    return jsonify(agents)
+    agents_data = []
+    for agent in agents:
+        agents_data.append({
+            "agent_id": agent.agent_id,
+            "status": agent.status,
+            "callbacks": agent.callbacks,
+            "last_seen": agent.last_seen.strftime("%H:%M:%S %m/%d/%Y") if agent.last_seen else "NULL",
+            "tags": [t.name for t in agent.tags]
+        })
+    return jsonify(agents_data)
+
 
 @app.route('/targets', methods=['GET'])
 @restrict_remote
