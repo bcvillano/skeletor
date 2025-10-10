@@ -1,112 +1,476 @@
 #!/usr/bin/env python3
 
-#Prototype of a interactive manager tool for skeletor.
+from textual.app import App, ComposeResult
+from textual import work
+from textual.containers import Container
+from textual.widgets import Header, Footer, Static, OptionList, DataTable, Button, Input, Label, SelectionList
+from textual.widgets.option_list import Option
+from textual.widgets.selection_list import Selection
+import os
+import requests
 
-import requests, re, json
+# Use environment variables with fallback
+SKELETOR_IP = os.getenv("SKELETOR_IP", "127.0.0.1")
+SKELETOR_PORT = os.getenv("SKELETOR_PORT", "80")
 
-URL = "http://127.0.0.1:80"
+class Manager(App):
 
-def skeletor_banner():
-    try:
-        with open("banner.txt", "r",encoding='utf-8') as f:
-            banner = f.read()
-            print(banner)
-    except FileNotFoundError:
-        pass
+    CSS = """
+    .hidden {
+        display: none;
+    }
+    
+    #menu-container {
+        align: center middle;
+        padding: 2;
+    }
+    
+    #agent-display, #command-container, #results-container {
+        padding: 1;
+    }
+    
+    #title {
+        text-align: center;
+        text-style: bold;
+        padding: 1;
+        color: $accent;
+    }
+    
+    .screen-title {
+        text-align: center;
+        text-style: bold;
+        padding: 1;
+    }
+    
+    DataTable {
+        height: auto;
+    }
+    
+    .back-button {
+        dock: bottom;
+        width: 100%;
+        margin-top: 1;
+    }
 
+    #agent-selector {
+        height: 15;
+        margin-bottom: 1;
+    }
 
-def menu():
-    print("1. Get Agent Status")
-    print("2. Issue a Command")
-    print("3. Get Result from Agent")    
-    print("4. Exit")
+    #command-input {
+        margin-bottom: 1;
+    }
 
-def exit_manager():
-    print("Exiting...")
-    exit(0)
+    #submit-command {
+        width: 100%;
+        margin-bottom: 1;
+    }
 
-def validate_ip(ip):
-    ipv4_pattern = r"^((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$"
-    return re.match(ipv4_pattern, ip) is not None
+    #status-message {
+        text-align: center;
+        padding: 1;
+        color: $warning;
+    }
 
-def get_agent_status():
-    try:
-        agents = requests.get(URL + "/get-agents").json()
-    except requests.exceptions.RequestException as e:
-        print(f"Error: {e}")
-        return 
-    if agents:
-        for agent in agents:
-            print(f"Agent ID: {agent['agent_id']}")
-            print(f"Agent Status: {agent['status']}\n")
+    #result-display {
+        border: solid $primary;
+        padding: 1;
+        margin: 1;
+        height: auto;
+        min-height: 10;
+    }
+    """
 
-            
-def send_cmd():
-    requests.post(URL + "/clear-targets")
-    command = input("Command: ")
-    if command.strip() == "":
-        print("Command cannot be empty.")
-        return
-    targets = input("Command Targets (comma separated) (Use * for all): ")
-    if targets == "*":
-        targets = []
-        for agent in requests.get(URL + "/get-agents").json():
-            targets.append(agent['agent_id'])
-        requests.post(URL + "/set-targets", json={"ips": targets})
-    else:
-        targets = targets.strip().split(",")
-        if "x" in targets:
-            x_val = input("Number of teams: ")
-            targets = targets.replace("x", x_val)
-            print(f"Targets: {targets}")
-            confirm = input("Confirm (y/n): ")
-            if confirm.lower() != "y" and confirm.lower() != "yes":
-                print("Command not sent.")
-                return
-            targets = targets.strip().split(",")
-            for t in targets:
-                if t.strip() != "":
-                    data = {'agent_id': t, 'action': 'command', 'command': command}
-                    requests.post("http://localhost:80/make-task", json=data)
-        else:
-            for t in targets:
-                if t.strip() != "":
-                    data = {'agent_id': t, 'action': 'command', 'command': command}
-                    requests.post("http://localhost:80/make-task", json=data)
+    BINDINGS = [
+        ("r", "refresh_agents", "Refresh"),
+        ("b", "show_menu", "Back to Menu"),
+        ("q", "quit", "Quit"),
+    ]
 
-    for target in requests.get("http://localhost:80/targets").text.split("\n"):
-            data = {'agent_id': target, 'action': 'command', 'command': command.strip()}
-            requests.post("http://localhost:80/make-task", json=data)
-    requests.post(URL + "/clear-targets")
-
-def get_result():
-    agent = input("Enter Agent ID to get last result from: ").strip()
-    if validate_ip(agent):
-        data = {"agent_id": agent}
-        result = requests.post("http://localhost:80/get-result", json=data).json()
-        result_str = "\n" + "Agent: " + agent + "\n" + "Command: " + result.get('command') + "\n" + "Result: " + result.get('result') + "\n"
-        print(result_str)
-    else:
-        print("Invalid Agent ID. Please enter the IPv4 address of the agent\n")
-        get_result()
-
-
-def main():
-    skeletor_banner()
-    while True:
-        menu()
-        userin = input(": ").strip()
-        options = {
-            "1": get_agent_status,
-            "2": send_cmd,
-            "3": get_result,
-            "4": exit_manager,
-        }
-        if userin in options:
-            options[userin]()
-        else:
-            print("Invalid option. Please try again.")
+    def compose(self) -> ComposeResult:
+        yield Header()
         
+        # Main Menu
+        with Container(id="menu-container"):
+            yield Static("Skeletor C2 Manager", id="title")
+            yield OptionList(
+                Option("Get Agent Status", id="status"),
+                Option("Issue A Command", id="cmd"),
+                Option("Get Results", id="results"),
+                Option("Exit", id="exit"),
+            )
+            yield Static("", id="status-text")
+
+        # Agent Status View
+        with Container(id="agent-display", classes="hidden"):
+            yield Static("Agent Status", classes="screen-title")
+            yield DataTable()
+            yield Static("", id="status-message")
+            yield Button("Back to Menu", classes="back-button")
+
+        # Command Interface
+        with Container(id="command-container", classes="hidden"):
+            yield Static("Issue Command", classes="screen-title")
+            yield Static("Select Target Agent(s) (Space to toggle):")
+            yield SelectionList(id="agent-selector")
+            yield Label("Command:")
+            yield Input(placeholder="Enter command (e.g., whoami, ls -la)...", id="command-input")
+            yield Button("Submit Command", id="submit-command", variant="primary")
+            yield Static("", id="status-message")
+            yield Button("Back to Menu", classes="back-button")
+
+        # Results View
+        with Container(id="results-container", classes="hidden"):
+            yield Static("Agent Results", classes="screen-title")
+            yield Static("Select Agent:")
+            yield OptionList(id="results-agent-selector")
+            yield Button("Get Results", id="get-results-button", variant="primary")
+            yield Static("", id="result-display")
+            yield Static("", id="status-message")
+            yield Button("Back to Menu", classes="back-button")
+        
+        yield Footer()
+    
+    def show_agent_status(self) -> None:
+        """Switch to agent display and start fetching."""
+        self._hide_all_containers()
+        self.query_one("#agent-display").remove_class("hidden")
+        
+        table = self.query_one(DataTable)
+        if not table.columns:
+            table.add_column("Agent ID", width=20)
+            table.add_column("Status", width=12)
+            table.add_column("Tags", width=30)
+            table.add_column("Last Seen", width=20)
+            table.add_column("Callbacks", width=12)
+        
+        table.clear()
+        table.add_row("Loading...", "Please wait", "", "", "")
+        self._update_status_message("Fetching agents...", "#agent-display")
+        
+        self.fetch_agents(update_table=True)
+    
+    @work(exclusive=True, thread=True)
+    def fetch_agents(self, update_table=False, update_selector=False, update_results_selector=False):
+        """Fetch agents in background and update appropriate view."""
+        try:
+            response = requests.get(
+                f"http://{SKELETOR_IP}:{SKELETOR_PORT}/get-agents", 
+                timeout=5
+            )
+            response.raise_for_status()
+            agents = response.json()
+            
+            if update_table:
+                self.call_from_thread(self._update_agent_table, agents, None)
+            if update_selector:
+                self.call_from_thread(self._update_agent_selector, agents, None)
+            if update_results_selector:
+                self.call_from_thread(self._update_results_selector, agents, None)
+                
+        except requests.exceptions.ConnectionError:
+            error = "Connection failed - is the server running?"
+            if update_table:
+                self.call_from_thread(self._update_agent_table, None, error)
+            if update_selector:
+                self.call_from_thread(self._update_agent_selector, None, error)
+            if update_results_selector:
+                self.call_from_thread(self._update_results_selector, None, error)
+        except requests.exceptions.Timeout:
+            error = "Request timed out"
+            if update_table:
+                self.call_from_thread(self._update_agent_table, None, error)
+            if update_selector:
+                self.call_from_thread(self._update_agent_selector, None, error)
+            if update_results_selector:
+                self.call_from_thread(self._update_results_selector, None, error)
+        except Exception as e:
+            error = f"Error: {str(e)}"
+            if update_table:
+                self.call_from_thread(self._update_agent_table, None, error)
+            if update_selector:
+                self.call_from_thread(self._update_agent_selector, None, error)
+            if update_results_selector:
+                self.call_from_thread(self._update_results_selector, None, error)
+    
+    def _update_agent_table(self, agents, error):
+        """Update the agent table with fetched data."""
+        table = self.query_one(DataTable)
+        table.clear()
+        
+        if error:
+            table.add_row("Error", error, "", "", "")
+            self._update_status_message(error, "#agent-display")
+        elif agents:
+            for agent in agents:
+                tags_str = ",".join(agent.get("tags", [])) if agent.get("tags") else ""
+                table.add_row(
+                    agent.get("agent_id", "N/A"),
+                    agent.get("status", "N/A"),
+                    tags_str,
+                    agent.get("last_seen", "N/A"),
+                    str(agent.get("callbacks", "N/A"))
+                )
+            self._update_status_message(f"Loaded {len(agents)} agent(s)", "#agent-display")
+        else:
+            table.add_row("No agents", "", "", "", "")
+            self._update_status_message("No agents available", "#agent-display")
+    
+    def _update_agent_selector(self, agents, error):
+        """Update the command agent selector with fetched data."""
+        agent_selector = self.query_one("#agent-selector", SelectionList)
+        agent_selector.clear_options()
+        
+        if error:
+            self._update_status_message(error, "#command-container")
+        elif agents:
+            for agent in agents:
+                agent_id = agent.get("agent_id", "unknown")
+                status = agent.get("status", "unknown")
+                display = f"{agent_id} ({status})"
+                agent_selector.add_option(Selection(display, agent_id))
+            self._update_status_message(
+                f"Loaded {len(agents)} agent(s) - Select targets and enter command", 
+                "#command-container"
+            )
+        else:
+            self._update_status_message("No agents available", "#command-container")
+
+    def _update_results_selector(self, agents, error):
+        """Update the results agent selector with fetched data."""
+        results_selector = self.query_one("#results-agent-selector", OptionList)
+        results_selector.clear_options()
+        
+        if error:
+            results_selector.add_option(Option(f"Error: {error}", id="error", disabled=True))
+            self._update_status_message(error, "#results-container")
+        elif agents:
+            for agent in agents:
+                agent_id = agent.get("agent_id", "unknown")
+                status = agent.get("status", "unknown")
+                display = f"{agent_id} ({status})"
+                results_selector.add_option(Option(display, id=agent_id))
+            self._update_status_message(f"Select an agent to view results", "#results-container")
+        else:
+            results_selector.add_option(Option("No agents available", id="none", disabled=True))
+            self._update_status_message("No agents available", "#results-container")
+    
+    def _update_status_message(self, message: str, container_id: str):
+        """Update status message in a specific container."""
+        try:
+            container = self.query_one(container_id)
+            status_msg = container.query_one("#status-message", Static)
+            status_msg.update(message)
+        except:
+            pass
+    
+    def _hide_all_containers(self):
+        """Hide all main containers."""
+        self.query_one("#menu-container").add_class("hidden")
+        self.query_one("#agent-display").add_class("hidden")
+        self.query_one("#command-container").add_class("hidden")
+        self.query_one("#results-container").add_class("hidden")
+
+    def on_option_list_option_selected(self, event: OptionList.OptionSelected):
+        """Handle menu selection (only for main menu)"""
+        # Only handle main menu selections
+        if event.option_list.parent.id == "menu-container":
+            if event.option.id == "exit":
+                self.exit()
+            elif event.option.id == "status":
+                self.show_agent_status()
+            elif event.option.id == "cmd":
+                self.show_command_interface()
+            elif event.option.id == "results":
+                self.show_results_interface()
+
+    def on_button_pressed(self, event: Button.Pressed):
+        """Handle button clicks."""
+        if "back-button" in event.button.classes:
+            self.show_menu()
+        elif event.button.id == "submit-command":
+            self.submit_command()
+        elif event.button.id == "get-results-button":
+            self.get_agent_results()
+    
+    def show_menu(self):
+        """Return to the main menu."""
+        self._hide_all_containers()
+        self.query_one("#menu-container").remove_class("hidden")
+        try:
+            self.query_one("#command-input", Input).value = ""
+        except:
+            pass
+        self.query_one("#menu-container").query_one(OptionList).focus()
+
+    def show_command_interface(self):
+        """Switch to command interface and fetch agents."""
+        self._hide_all_containers()
+        self.query_one("#command-container").remove_class("hidden")
+        
+        self._update_status_message("Loading agents...", "#command-container")
+        
+        self.fetch_agents(update_selector=True)
+
+    def show_results_interface(self):
+        """Switch to results interface and fetch agents."""
+        self._hide_all_containers()
+        self.query_one("#results-container").remove_class("hidden")
+        
+        results_selector = self.query_one("#results-agent-selector", OptionList)
+        results_selector.clear_options()
+        results_selector.add_option(Option("Loading agents...", id="loading", disabled=True))
+        self._update_status_message("Loading agents...", "#results-container")
+        
+        # Clear previous results
+        self.query_one("#result-display", Static).update("")
+        
+        self.fetch_agents(update_results_selector=True)
+
+    def submit_command(self):
+        """Submit command to selected agents - matches skelctl workflow."""
+        agent_selector = self.query_one("#agent-selector", SelectionList)
+        command_input = self.query_one("#command-input", Input)
+        
+        # Get selected agents from SelectionList
+        selected_agents = list(agent_selector.selected)
+        
+        command = command_input.value.strip()
+        
+        # Validation
+        if not command:
+            self._update_status_message("Error: Please enter a command", "#command-container")
+            return
+        
+        if not selected_agents:
+            self._update_status_message("Error: Please select at least one agent (use Space to toggle)", "#command-container")
+            return
+        
+        # Issue command using skelctl workflow
+        self._update_status_message(f"Issuing command to {len(selected_agents)} agent(s)...", "#command-container")
+        self.issue_command_to_agents(selected_agents, command)
+    
+    @work(exclusive=True, thread=True)
+    def issue_command_to_agents(self, agent_ids: list, command: str):
+        """Issue command to specified agents - matches skelctl exactly."""
+        try:
+            # Step 1: Set targets (matches skelctl's POST to /set-targets with {"ips": [...]})
+            targets_payload = {"ips": agent_ids}
+            response = requests.post(
+                f"http://{SKELETOR_IP}:{SKELETOR_PORT}/set-targets",
+                json=targets_payload,
+                timeout=5
+            )
+            response.raise_for_status()
+            
+            # Step 2: Create task for each target (matches skelctl's loop through targets)
+            tasks_created = 0
+            for agent_id in agent_ids:
+                task_data = {
+                    'agent_id': agent_id,
+                    'action': 'command',
+                    'command': command
+                }
+                response = requests.post(
+                    f"http://{SKELETOR_IP}:{SKELETOR_PORT}/make-task",
+                    json=task_data,
+                    timeout=5
+                )
+                response.raise_for_status()
+                tasks_created += 1
+            
+            success_msg = f"✓ Command issued successfully! Tasks created: {tasks_created}/{len(agent_ids)}"
+            self.call_from_thread(self._update_status_message, success_msg, "#command-container")
+            self.call_from_thread(self._clear_command_input)
+            
+        except requests.exceptions.ConnectionError:
+            error_msg = "✗ Connection failed - is the server running?"
+            self.call_from_thread(self._update_status_message, error_msg, "#command-container")
+        except requests.exceptions.Timeout:
+            error_msg = "✗ Request timed out"
+            self.call_from_thread(self._update_status_message, error_msg, "#command-container")
+        except Exception as e:
+            error_msg = f"✗ Error: {str(e)}"
+            self.call_from_thread(self._update_status_message, error_msg, "#command-container")
+    
+    def get_agent_results(self):
+        """Get results from selected agent."""
+        results_selector = self.query_one("#results-agent-selector", OptionList)
+        
+        # OptionList.highlighted is an int (index) or None
+        if results_selector.highlighted is not None:
+            try:
+                option = results_selector.get_option_at_index(results_selector.highlighted)
+                if option.id not in ["error", "none", "loading"]:
+                    selected_agent = option.id
+                    self._update_status_message(f"Fetching results for {selected_agent}...", "#results-container")
+                    self.fetch_agent_results(selected_agent)
+                    return
+            except Exception as e:
+                self._update_status_message(f"Error getting selection: {str(e)}", "#results-container")
+                return
+        
+        self._update_status_message("Error: Please select an agent", "#results-container")
+    
+    @work(exclusive=True, thread=True)
+    def fetch_agent_results(self, agent_id: str):
+        """Fetch results for a specific agent - matches skelctl."""
+        try:
+            # Match skelctl's POST to /get-result with {"agent_id": ...}
+            data = {"agent_id": agent_id}
+            response = requests.post(
+                f"http://{SKELETOR_IP}:{SKELETOR_PORT}/get-result",
+                json=data,
+                timeout=5
+            )
+            response.raise_for_status()
+            result = response.json()
+            
+            # Format output similar to skelctl
+            result_text = f"""Agent: {agent_id}
+Command: {result.get('command', 'N/A')}
+Result:
+{result.get('result', 'No result available')}
+"""
+            
+            self.call_from_thread(self._update_result_display, result_text)
+            self.call_from_thread(self._update_status_message, "✓ Results retrieved", "#results-container")
+            
+        except requests.exceptions.ConnectionError:
+            error_msg = "✗ Connection failed - is the server running?"
+            self.call_from_thread(self._update_status_message, error_msg, "#results-container")
+        except requests.exceptions.Timeout:
+            error_msg = "✗ Request timed out"
+            self.call_from_thread(self._update_status_message, error_msg, "#results-container")
+        except Exception as e:
+            error_msg = f"✗ Error: {str(e)}"
+            self.call_from_thread(self._update_status_message, error_msg, "#results-container")
+    
+    def _update_result_display(self, text: str):
+        """Update the result display area."""
+        self.query_one("#result-display", Static).update(text)
+    
+    def _clear_command_input(self):
+        """Clear the command input field."""
+        try:
+            self.query_one("#command-input", Input).value = ""
+        except:
+            pass
+
+    def action_refresh_agents(self):
+        """Refresh agent list when 'r' is pressed."""
+        if not self.query_one("#agent-display").has_class("hidden"):
+            self.fetch_agents(update_table=True)
+        elif not self.query_one("#command-container").has_class("hidden"):
+            self.fetch_agents(update_selector=True)
+        elif not self.query_one("#results-container").has_class("hidden"):
+            self.fetch_agents(update_results_selector=True)
+
+    def action_show_menu(self):
+        """Return to the main menu when 'b' is pressed."""
+        self.show_menu()
+
 
 if __name__ == "__main__":
-    main()
+    app = Manager()
+    app.run()

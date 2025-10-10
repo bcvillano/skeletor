@@ -114,7 +114,12 @@ def check_agent_status():
             db.session.commit()
         time.sleep(180)
 
-
+def on_callback(agent):
+    agent.status = 'active'
+    agent.callbacks += 1
+    update_timestamp(agent.agent_id)
+    update_pwnboard(agent.agent_id)
+    
 #ROUTES:
 
 @app.route('/register', methods=['POST'])
@@ -166,10 +171,8 @@ def get_task():
         if agent is None:
             return jsonify({"status": "Must re-register"}), 418 #If agent_id isn't in database, tell the client to re-register
         else:
-            agent.status = 'active'
-            agent.callbacks += 1
-            update_pwnboard(ip)
-            update_timestamp(ip)
+            
+            on_callback(agent)
             db.session.commit()
         task = Task.query.filter_by(agent_id=ip, completed=False).first()
         if task:
@@ -223,8 +226,17 @@ def status():
 @restrict_remote
 def get_agents():
     agents = Agent.query.all()
-    agents = [{"agent_id": agent.agent_id, "status": agent.status} for agent in agents]
-    return jsonify(agents)
+    agents_data = []
+    for agent in agents:
+        agents_data.append({
+            "agent_id": agent.agent_id,
+            "status": agent.status,
+            "callbacks": agent.callbacks,
+            "last_seen": agent.last_seen.strftime("%H:%M:%S %m/%d/%Y") if agent.last_seen else "NULL",
+            "tags": [t.name for t in agent.tags]
+        })
+    return jsonify(agents_data)
+
 
 @app.route('/targets', methods=['GET'])
 @restrict_remote
