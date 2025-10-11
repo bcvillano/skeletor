@@ -9,7 +9,7 @@ SKELETOR_PORT = "80"
 
 
 def arg_setup():
-    msg = "Command line tool for interaction with Skeletor C2 server running on localhost"
+    msg = "Command line tool for interaction with Skeletor C2 server"
     parser = argparse.ArgumentParser(description = msg)
     subparsers = parser.add_subparsers(title="Verb", dest="verb", required=True)
 
@@ -31,8 +31,8 @@ def arg_setup():
     #set targets
     set_parser = subparsers.add_parser("set", help="Set information")
     set_parser.add_argument("resource", help="Resource to set", choices=['targets'])
-    set_parser.add_argument("mode", help="How to set targets", choices=['ips','tagged'])
-    set_parser.add_argument("value", help="IPs (comma separated) or tag name")
+    set_parser.add_argument("targets",help="Targets to tag in a comma seperated list (Agent IDs, or tags if tag mode argument is used)")
+    set_parser.add_argument("-t","--tag-mode",required=False,help="Use tagging mode",action="store_true")
     #result command
     result_parser = subparsers.add_parser("result", help="Get results")
     result_parser.add_argument("agent_id", help="ID of agent to get results from")
@@ -94,23 +94,29 @@ def main():
             requests.post(f"http://{SKELETOR_IP}:{SKELETOR_PORT}/make-task", json=json_data)
     elif args.verb == 'set':
         if args.resource == 'targets':
-            if args.mode == "ips":
-                ips = args.value.split(",")
+            if not args.tag_mode:
+                ips = args.targets.split(",")
                 data = {"ips": ips}
+                print(data)
                 requests.post(f"http://{SKELETOR_IP}:{SKELETOR_PORT}/set-targets", json=data)
-            elif args.mode == "tagged":
-                tag_data = {"tag": args.value}
-                resp = requests.post(f"http://{SKELETOR_IP}:{SKELETOR_PORT}/tagged", json=tag_data).json()
-                if "agents" not in resp:
-                    print(f"Error: {resp.get('error', 'unknown error')}")
-                else:
-                    agent_ids = resp["agents"]
-                    if not agent_ids:
-                        print(f"No agents found with tag '{args.value}'")
+            else:
+                agents = []
+                tags = args.targets.split(",")
+                for tag in tags:
+                    tag_data = {"tag": tag}
+                    resp = requests.post(f"http://{SKELETOR_IP}:{SKELETOR_PORT}/tagged", json=tag_data).json()
+                    if "agents" not in resp:
+                        print(f"Error: {resp.get('error', 'unknown error')}")
                     else:
-                        data = {"ips": agent_ids}
-                        requests.post(f"http://{SKELETOR_IP}:{SKELETOR_PORT}/set-targets", json=data)
-                        print(f"Set {len(agent_ids)} agents as targets (tag = {args.value})")
+                        agent_ids = resp["agents"]
+                        if not agent_ids:
+                            print(f"No agents found with tag '{tag}'")
+                        else:
+                            agents += agent_ids
+                data = {"ips": agents}
+                print(data)
+                requests.post(f"http://{SKELETOR_IP}:{SKELETOR_PORT}/set-targets", json=data)
+                print(f"Set {len(agents)} agents as targets")
         else:
             print("Invalid resource type for set command")
     elif args.verb in ["result","results"]:
