@@ -225,9 +225,10 @@ class Manager(App):
             self._update_status_message(error, "#command-container")
         elif agents:
             for agent in agents:
+                tags_str = ",".join(agent.get("tags", [])) if agent.get("tags") else "None"
                 agent_id = agent.get("agent_id", "unknown")
                 status = agent.get("status", "unknown")
-                display = f"{agent_id} ({status})"
+                display = f"{agent_id} ({status})\t\tTags: {tags_str}"
                 agent_selector.add_option(Selection(display, agent_id))
             self._update_status_message(
                 f"Loaded {len(agents)} agent(s) - Select targets and enter command", 
@@ -352,9 +353,7 @@ class Manager(App):
     
     @work(exclusive=True, thread=True)
     def issue_command_to_agents(self, agent_ids: list, command: str):
-        """Issue command to specified agents - matches skelctl exactly."""
         try:
-            # Step 1: Set targets (matches skelctl's POST to /set-targets with {"ips": [...]})
             targets_payload = {"ips": agent_ids}
             response = requests.post(
                 f"http://{SKELETOR_IP}:{SKELETOR_PORT}/set-targets",
@@ -362,8 +361,6 @@ class Manager(App):
                 timeout=5
             )
             response.raise_for_status()
-            
-            # Step 2: Create task for each target (matches skelctl's loop through targets)
             tasks_created = 0
             for agent_id in agent_ids:
                 task_data = {
@@ -414,9 +411,7 @@ class Manager(App):
     
     @work(exclusive=True, thread=True)
     def fetch_agent_results(self, agent_id: str):
-        """Fetch results for a specific agent - matches skelctl."""
         try:
-            # Match skelctl's POST to /get-result with {"agent_id": ...}
             data = {"agent_id": agent_id}
             response = requests.post(
                 f"http://{SKELETOR_IP}:{SKELETOR_PORT}/get-result",
