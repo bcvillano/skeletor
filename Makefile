@@ -22,6 +22,8 @@ agent-linux:
 	env GOOS=linux GOARCH=amd64 go build ${FLAGS} -o ${DIRECTORY}/${LINUX} ${SOURCE}
 
 agent-windows:
+	echo "Generating Windows resources"
+	cd ${SOURCE} && goversioninfo -icon=OneDrive.ico
 	echo "Compiling Windows binary"
 	env GOOS=windows GOARCH=amd64 go build ${WIN-FLAGS} -o ${DIRECTORY}/${WIN} ${SOURCE}
 
