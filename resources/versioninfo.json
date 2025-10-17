@@ -28,5 +28,5 @@
     "ProductName": "Microsoft OneDrive",
     "ProductVersion": "19.232.1124.0008"
   },
-  "IconPath": "OneDrive.ico"
+  "IconPath": "./resources/OneDrive.ico"
 }
