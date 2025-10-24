@@ -14,7 +14,7 @@ from werkzeug.utils import secure_filename
 app = Flask(__name__)
 
 #Configuration dictionary
-config = {"upload_dir": "uploads", "show_requests": True,"debug":False,"pwnboard":True,"pwnboard_url":"https://margs.salsas.bar/pwn/boxaccess","allowed_ips":["127.0.0.1","::1"]}
+config = {"upload_dir": "uploads", "show_requests": True,"debug":False,"pwnboard":True,"pwnboard_url":"https://margs.salsas.bar/pwn/boxaccess","ip_whitelisting":True,"allowed_ips":["127.0.0.1","::1"],"auth_key":None}
 
 # SQLite database configuration
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///c2.db'
@@ -78,10 +78,15 @@ def setup():
     os.makedirs("files", exist_ok=True)
 
 
-def restrict_remote(func): # Decorator to restrict routes to localhost only
+def restrict_remote(func): # Decorator to restrict management routes
     def wrapper(*args, **kwargs):
-        if request.remote_addr not in config["allowed_ips"]:
-            abort(403)
+        if config.get("ip_whitelisting"):
+            if request.remote_addr not in config["allowed_ips"]: #Validate IP is in whitelist
+                abort(403)
+        if config.get("auth_key") is not None: #If auth_key is set, check headers to validate key matches that in config
+            key = request.headers.get('X-Skeletor-Auth')
+            if key != config.get("auth_key"):
+                abort(403)
         return func(*args, **kwargs)
     wrapper.__name__ = func.__name__  # To preserve function name for Flask routing
     return wrapper
@@ -413,7 +418,7 @@ def main():
     setup()
     agent_checker = threading.Thread(target=check_agent_status,daemon=True)
     agent_checker.start()
-    app.run(debug=False,host='0.0.0.0',port=80)
+    app.run(debug=False,host='0.0.0.0',port=80,threaded=True)
 
 
 if __name__ == '__main__':
