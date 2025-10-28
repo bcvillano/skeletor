@@ -14,7 +14,7 @@ from werkzeug.utils import secure_filename
 app = Flask(__name__)
 
 #Configuration dictionary
-config = {"upload_dir": "uploads", "show_requests": True,"debug":False,"pwnboard":True,"pwnboard_url":"https://margs.salsas.bar/pwn/boxaccess","ip_whitelisting":True,"allowed_ips":["127.0.0.1","::1"],"auth_key":None}
+config = {"upload_dir": "uploads", "show_requests": True,"debug":False,"pwnboard":True,"pwnboard_url":"https://margs.salsas.bar/pwn/boxaccess","ip_whitelisting":False,"allowed_ips":["127.0.0.1","::1"],"auth_key":"letredin"}
 
 # SQLite database configuration
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///c2.db'
@@ -143,10 +143,18 @@ def register_agent():
             db.session.commit()
             if os:
                 os_json = {"agent_id":agent_id,"tags":os}
-                requests.post("http://127.0.0.1/tag-agent",json=os_json,timeout=10)
+                auth_key = config.get("auth_key")
+                if auth_key is None:
+                    requests.post("http://127.0.0.1/tag-agent",json=os_json,timeout=10)
+                else:
+                    requests.post("http://127.0.0.1/tag-agent",json=os_json,timeout=10,headers={"X-Skeletor-Auth":auth_key})
             if implant_type:
                 implant_type_json = {"agent_id":agent_id,"tags":implant_type}
-                requests.post("http://127.0.0.1/tag-agent",json=implant_type_json,timeout=10)
+                auth_key = config.get("auth_key")
+                if auth_key is None:
+                    requests.post("http://127.0.0.1/tag-agent",json=os_json,timeout=10)
+                else:
+                    requests.post("http://127.0.0.1/tag-agent",json=os_json,timeout=10,headers={"X-Skeletor-Auth":auth_key})
             return jsonify({"message": "Agent registered successfully"}), 201
         else:
             agent.status = 'active'

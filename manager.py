@@ -12,6 +12,10 @@ import requests
 # Use environment variables with fallback
 SKELETOR_IP = os.getenv("SKELETOR_IP", "127.0.0.1")
 SKELETOR_PORT = os.getenv("SKELETOR_PORT", "80")
+CUSTOM_HEADERS = {}
+SKELETOR_PASSWD = "letredin"
+if SKELETOR_PASSWD is not None:
+    CUSTOM_HEADERS["X-Skeletor-Auth"] = SKELETOR_PASSWD
 
 class Manager(App):
 
@@ -156,7 +160,7 @@ class Manager(App):
         try:
             response = requests.get(
                 f"http://{SKELETOR_IP}:{SKELETOR_PORT}/get-agents", 
-                timeout=5
+                timeout=5, headers=CUSTOM_HEADERS
             )
             response.raise_for_status()
             agents = response.json()
@@ -358,7 +362,7 @@ class Manager(App):
             response = requests.post(
                 f"http://{SKELETOR_IP}:{SKELETOR_PORT}/set-targets",
                 json=targets_payload,
-                timeout=5
+                timeout=5,headers=CUSTOM_HEADERS
             )
             response.raise_for_status()
             tasks_created = 0
@@ -371,7 +375,7 @@ class Manager(App):
                 response = requests.post(
                     f"http://{SKELETOR_IP}:{SKELETOR_PORT}/make-task",
                     json=task_data,
-                    timeout=5
+                    timeout=5,headers=CUSTOM_HEADERS
                 )
                 response.raise_for_status()
                 tasks_created += 1
@@ -416,7 +420,7 @@ class Manager(App):
             response = requests.post(
                 f"http://{SKELETOR_IP}:{SKELETOR_PORT}/get-result",
                 json=data,
-                timeout=5
+                timeout=5,headers=CUSTOM_HEADERS
             )
             response.raise_for_status()
             result = response.json()

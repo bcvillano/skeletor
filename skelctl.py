@@ -6,6 +6,10 @@ import json
 
 SKELETOR_IP = "localhost"
 SKELETOR_PORT = "80"
+CUSTOM_HEADERS = {}
+SKELETOR_PASSWD = "letredin"
+if SKELETOR_PASSWD is not None:
+    CUSTOM_HEADERS["X-Skeletor-Auth"] = SKELETOR_PASSWD
 
 
 def arg_setup():
@@ -48,18 +52,18 @@ def main():
     
     if args.verb == 'get':
         if args.resource == 'agents':
-            agents = requests.get(f"http://{SKELETOR_IP}:{SKELETOR_PORT}/get-agents").json()
+            agents = requests.get(f"http://{SKELETOR_IP}:{SKELETOR_PORT}/get-agents",headers=CUSTOM_HEADERS).json()
             for agent in agents: 
                 print(agent.get('agent_id') + " - " + agent.get('status'))
         elif args.resource == 'targets':
-            targets = requests.get(f"http://{SKELETOR_IP}:{SKELETOR_PORT}/targets").text.split("\n")
+            targets = requests.get(f"http://{SKELETOR_IP}:{SKELETOR_PORT}/targets",headers=CUSTOM_HEADERS).text.split("\n")
             for target in targets: 
                 print(target)
         elif args.resource == "agent":
             if not args.arg:
                 raise SyntaxError("Missing agent_id")
             data = {"agent_id":args.arg}
-            agent_info = requests.post(f"http://{SKELETOR_IP}:{SKELETOR_PORT}/get-agent",json=data).json()
+            agent_info = requests.post(f"http://{SKELETOR_IP}:{SKELETOR_PORT}/get-agent",json=data,headers=CUSTOM_HEADERS).json()
             print("Agent ID:",args.agent_id)
             print("Status:",agent_info["status"])
             print("Targeted:",agent_info["targeted"])
@@ -69,7 +73,7 @@ def main():
             print("Last Result:",agent_info["last_result"])
         elif args.resource == "tagged":
             data = {"tag":args.arg}
-            tagged = requests.post(f"http://{SKELETOR_IP}:{SKELETOR_PORT}/tagged",json=data).json()["agents"]
+            tagged = requests.post(f"http://{SKELETOR_IP}:{SKELETOR_PORT}/tagged",json=data,headers=CUSTOM_HEADERS).json()["agents"]
             print(f"Agents with tag '{args.arg}':")
             for agent in tagged:
                 print("\t"+agent)
@@ -77,34 +81,34 @@ def main():
             print("Invalid resource type for get command")
     elif args.verb == 'cmd':
         #print("cmd = " + args.cmd)
-        for target in requests.get(f"http://{SKELETOR_IP}:{SKELETOR_PORT}/targets").text.split("\n"):
+        for target in requests.get(f"http://{SKELETOR_IP}:{SKELETOR_PORT}/targets",headers=CUSTOM_HEADERS).text.split("\n"):
             if target.strip() != "":
                 data = {'agent_id': target, 'action': 'command', 'command': args.cmd}
-                requests.post(f"http://{SKELETOR_IP}:{SKELETOR_PORT}/make-task", json=data)
+                requests.post(f"http://{SKELETOR_IP}:{SKELETOR_PORT}/make-task", json=data,headers=CUSTOM_HEADERS)
     elif args.verb == 'clear':
         if args.resource == 'targets':
-            requests.post(f"http://{SKELETOR_IP}:{SKELETOR_PORT}/clear-targets")
+            requests.post(f"http://{SKELETOR_IP}:{SKELETOR_PORT}/clear-targets",headers=CUSTOM_HEADERS)
         else:
             print("Invalid resource type for clear command")
     elif args.verb == 'post':
         json_data = json.load(open(args.json_file))
-        targets = requests.get(f"http://{SKELETOR_IP}:{SKELETOR_PORT}/targets").text.split("\n")
+        targets = requests.get(f"http://{SKELETOR_IP}:{SKELETOR_PORT}/targets").text.split("\n",headers=CUSTOM_HEADERS)
         for target in targets:
             json_data['agent_id'] = target
-            requests.post(f"http://{SKELETOR_IP}:{SKELETOR_PORT}/make-task", json=json_data)
+            requests.post(f"http://{SKELETOR_IP}:{SKELETOR_PORT}/make-task", json=json_data,headers=CUSTOM_HEADERS)
     elif args.verb == 'set':
         if args.resource == 'targets':
             if not args.tag_mode:
                 ips = args.targets.split(",")
                 data = {"ips": ips}
                 print(data)
-                requests.post(f"http://{SKELETOR_IP}:{SKELETOR_PORT}/set-targets", json=data)
+                requests.post(f"http://{SKELETOR_IP}:{SKELETOR_PORT}/set-targets", json=data,headers=CUSTOM_HEADERS)
             else:
                 agents = []
                 tags = args.targets.split(",")
                 for tag in tags:
                     tag_data = {"tag": tag}
-                    resp = requests.post(f"http://{SKELETOR_IP}:{SKELETOR_PORT}/tagged", json=tag_data).json()
+                    resp = requests.post(f"http://{SKELETOR_IP}:{SKELETOR_PORT}/tagged", json=tag_data,headers=CUSTOM_HEADERS).json()
                     if "agents" not in resp:
                         print(f"Error: {resp.get('error', 'unknown error')}")
                     else:
@@ -115,19 +119,19 @@ def main():
                             agents += agent_ids
                 data = {"ips": agents}
                 print(data)
-                requests.post(f"http://{SKELETOR_IP}:{SKELETOR_PORT}/set-targets", json=data)
+                requests.post(f"http://{SKELETOR_IP}:{SKELETOR_PORT}/set-targets", json=data,headers=CUSTOM_HEADERS)
                 print(f"Set {len(agents)} agents as targets")
         else:
             print("Invalid resource type for set command")
     elif args.verb in ["result","results"]:
         data = {"agent_id": args.agent_id}
-        result = requests.post(f"http://{SKELETOR_IP}:{SKELETOR_PORT}/get-result", json=data).json()
+        result = requests.post(f"http://{SKELETOR_IP}:{SKELETOR_PORT}/get-result", json=data,headers=CUSTOM_HEADERS).json()
         result_str = "\n" + "Agent: " + args.agent_id + "\n" + "Command: " + result.get('command') + "\n" + "Result: " + result.get('result') + "\n"
         print(result_str)
     elif args.verb == "tag":
         data = {"agent_id": args.agent_id,"tags": args.tags}
         print(data)
-        resp = requests.post(f"http://{SKELETOR_IP}:{SKELETOR_PORT}/tag-agent", json=data)
+        resp = requests.post(f"http://{SKELETOR_IP}:{SKELETOR_PORT}/tag-agent", json=data,headers=CUSTOM_HEADERS)
         jason = resp.json()
         print(f"Agent {jason['agent_id']} tagged")
         print(f"Added tags: {', '.join(jason['added_tags']) if jason['added_tags'] else 'None'}")
