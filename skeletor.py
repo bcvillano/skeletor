@@ -24,9 +24,19 @@ if config.get("notify_discord"):
 for i in config:
     print(i+":"+str(config[i]))
 
-# SQLite database configuration
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///c2.db'
-app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+DB_HOST = os.getenv("DB_HOST", None)
+if DB_HOST:
+    # PostgreSQL configuration
+    DB_USER = os.getenv("DB_USER", "skeletor")
+    DB_PASSWORD = os.getenv("DB_PASSWORD", "letredin")
+    DB_NAME = os.getenv("DB_NAME", "c2")
+    DB_PORT = os.getenv("DB_PORT", "5432")
+    app.config['SQLALCHEMY_DATABASE_URI'] = f'postgresql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}'
+    print(f"Using PostgreSQL: {DB_HOST}:{DB_PORT}/{DB_NAME}")
+else:
+    # Use SQLite if no POSTGRESQL DB HOST is specified
+    app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///c2.db'
+    print("Using SQLite: c2.db")
 db = SQLAlchemy(app)
 
 #logging config
@@ -480,5 +490,5 @@ def main():
     app.run(debug=False,host='0.0.0.0',port=80,threaded=True)
 
 
-if __name__ == '__main__':
-    main()
+# if __name__ == '__main__':
+#     main()

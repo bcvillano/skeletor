@@ -1,0 +1,44 @@
+version: '3.8'
+
+services:
+  skeletor:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "80:80" 
+    environment:
+      - DB_HOST=db
+      - DB_PORT=5432
+      - DB_NAME=c2
+      - DB_USER=skeletor
+      - DB_PASSWORD=letredin
+    volumes:
+      - ./logs:/c2/logs
+    networks:
+      - skeletor-network
+    restart: unless-stopped
+  db:
+    image: postgres:16-alpine
+    environment:
+      - POSTGRES_DB=c2
+      - POSTGRES_USER=skeletor
+      - POSTGRES_PASSWORD=letredin
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U skeletor -d c2"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - skeletor-network
+    restart: unless-stopped
+
+networks:
+  skeletor-network:
+    driver: bridge
+
+volumes:
+  db-data:
+    driver: local
