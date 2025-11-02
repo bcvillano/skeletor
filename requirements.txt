@@ -3,3 +3,4 @@ flask-sqlalchemy
 requests
 textual
 argparse
+python-dotenv
