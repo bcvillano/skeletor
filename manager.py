@@ -370,7 +370,7 @@ class Manager(App):
                 task_data = {
                     'agent_id': agent_id,
                     'action': 'command',
-                    'command': command
+                    'input': command
                 }
                 response = requests.post(
                     f"http://{SKELETOR_IP}:{SKELETOR_PORT}/make-task",

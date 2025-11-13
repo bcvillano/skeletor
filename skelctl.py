@@ -83,7 +83,7 @@ def main():
         #print("cmd = " + args.cmd)
         for target in requests.get(f"http://{SKELETOR_IP}:{SKELETOR_PORT}/targets",headers=CUSTOM_HEADERS).text.split("\n"):
             if target.strip() != "":
-                data = {'agent_id': target, 'action': 'command', 'command': args.cmd}
+                data = {'agent_id': target, 'action': 'command', 'input': args.cmd}
                 requests.post(f"http://{SKELETOR_IP}:{SKELETOR_PORT}/make-task", json=data,headers=CUSTOM_HEADERS)
     elif args.verb == 'clear':
         if args.resource == 'targets':

