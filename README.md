@@ -81,3 +81,11 @@ agent := Agent{
         },
     }
 ```
+
+### Implant Feature Comparison
+
+| Feature | Go Implant | Python Implant|
+| :--- | :---: | :---: |
+| **Command Execution** | &check; | &check; |
+| **HTTPS Support** | &cross;| &check; |
+| **Shellcode Process Injection** | Windows Only (Currently In Progress)| &cross; |
