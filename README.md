@@ -57,6 +57,9 @@ skelctl cmd "whoami ; id"
 To set up the implants, make any configuration changes needed in the main function of the implant program. Then, when run it will begin beaconing out to retrieve commands from the configured server. There are currently implants written in two different languages: Python and Go.
 
 ### Python Implant
+
+> **Python Implant is now considered Legacy.** Most new features will **NOT** be implemented in the Python version. It is highly recommended to use the **Go Implant** for all active development and deployments. The Python Implant may be removed in future updates
+
  The Python implant has three configurable arguments when creating an instance of the Beacon class: server_ip (mandatory, the IP or FQDN of the host the server is running on), port (port the server is listening on, defaults to 80), and callback_interval (the interval, in seconds, of how often the implant should beacon out. Default is 120). Additional arguments which can be defined are the jitter (defines the amount of seconds, + or -, the callback interval should be randomly adjusted each sleep to make callbacks harder to detect) and the debug and https booleans (both default to False, if https is True then https protocol will be used instead of http, and if debug is True then debugging + error messages will be printed to stdout). The following codeblock illustrates what the main function of beacon.py looks like when specifying all arguments to the implant.
 ```python
 def main():
