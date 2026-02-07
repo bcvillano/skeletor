@@ -18,7 +18,7 @@ var upgrader = websocket.Upgrader{
 
 func main() {
 	port := "9000"
-	fmt.Printf("[*] Skeletor Shell Handler listening on :%s\n", port)
+	fmt.Printf("[*] Skeletor Shell Handler listening on 0.0.0.0:%s\n", port)
 
 	http.HandleFunc("/ws", func(w http.ResponseWriter, r *http.Request) {
 		conn, err := upgrader.Upgrade(w, r, nil)
@@ -28,8 +28,9 @@ func main() {
 		}
 		defer conn.Close()
 
-		fmt.Println("\n[+] Implant connected! Entering interactive mode...")
-		
+		remoteAddr := r.RemoteAddr
+		fmt.Printf("\n[+] Connection received from %s\n",remoteAddr)
+
 		// Create a scanner for terminal input
 		scanner := bufio.NewScanner(os.Stdin)
 
