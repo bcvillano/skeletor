@@ -15,13 +15,13 @@ Tasks are Skeletor's way of assigning work to clients. When a client send a POST
 the client receives a JSON object in the form:
 ```json
 {
-  "action": "command||download||upload",
-  "command": "NULL||command",
-  "filename": "NULL||filename",
+  "action": "command||shell",
+  "input": "command or other input",
+  "input2": "secondary input to action if required",
   "task_id": 99
 }
 ```
-Currently, the only supported action for Skeletor clients is command, where the agents will execute the command via bash for Linux systems and Powershell for Windows systems, then return a JSON object in the
+The most commonly used action for Skeletor clients is **command**, where the agents will execute the command via bash for Linux systems and Powershell for Windows systems, then return a JSON object in the
 form of 
 ```json
 {
@@ -32,6 +32,18 @@ form of
 }
 ```
 where task_id is assigned by the server to the task when it is created to keep track of different tasks.  
+
+## Reverse Shell
+Skeletor's **Go Implant** also has a **shell** action, which is 
+used to create a reverse shell over a WebSocket. To do so, 
+run the shell_handler.go program, either by compiling it or with
+the command *go run shell_handler.go*, which will listen for 
+incoming connections, by default on port 9000 and give you an
+interactive reverse shell to execute commands in real-time.
+
+> The shell handler is only designed to handle one connection at
+a time. Make sure you end the previous connection before 
+starting a new interactive shell. 
 
 # Usage
 ## Server
@@ -92,3 +104,4 @@ agent := Agent{
 | **Command Execution** | &check; | &check; |
 | **HTTPS Support** | &cross;| &check; |
 | **Shellcode Process Injection** | Windows Only (Currently In Progress)| &cross; |
+|**Websocket-based Reverse Shell**|&check;|&cross;|
