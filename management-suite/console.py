@@ -1,30 +1,69 @@
 #!/usr/bin/python3
  
 from pathlib import Path
+from dotenv import load_dotenv
+import os
+import requests
 
+load_dotenv()
 CURRENT_PATH = Path(__file__).resolve().parent
 LOGO_PATH = CURRENT_PATH.parent / "resources" / "logo.txt"
-
+SKELETOR_IP = os.getenv("SKELETOR_IP", "127.0.0.1")
+SKELETOR_PORT = os.getenv("SKELETOR_PORT", "80")
+SKELETOR_WEBSHELL_HANDLER_ADDR = os.getenv("SKELETOR_WEBSHELL_HANDLER_ADDR","127.0.0.1:9000")
+SKELETOR_AUTH_KEY=os.getenv("SKELETOR_AUTH_KEY","")
+CUSTOM_HEADERS = {}
+if SKELETOR_AUTH_KEY.strip() != "":
+    CUSTOM_HEADERS["X-Skeletor-Auth"] = SKELETOR_AUTH_KEY
 
 def init():
     print("Initializing Skeletor Console..."+"\n"*3)
     if LOGO_PATH.exists():
         print(LOGO_PATH.read_text(encoding='utf-8'),end="\n"*4)
 
+def cmd_help():
+    menu = {
+        "help": "Show this list of commands",
+        "agents": "View Skeletor Agents",
+        "quit": "Exit Skeletor Console"
+    }
+    print("Commands:\n")
+    for command, description in menu.items():
+        print(f"  {command:12}   {description}")
+    print("\n")
+
+def cmd_exit():
+    userin = input("Are you sure you want to exit the console? ").strip().lower()
+    if userin in ["yes","y"]:
+        quit()
+
+def cmd_agents():
+    try:
+        agents = requests.get(f"http://{SKELETOR_IP}:{SKELETOR_PORT}/get-agents",
+        timeout=5,headers=CUSTOM_HEADERS).json()
+        for agent in agents:
+            print(agent)
+    except:
+        pass
 
 def main():
+    commands = {
+    "agents": cmd_agents,
+    "help": cmd_help,
+    "h": cmd_help,
+    "exit": cmd_exit,
+    "quit": cmd_exit,
+    "q": cmd_exit,
+    }
     init()
     while True:
-        userin = input("> ").strip()
-        match userin:
-            case userin if userin in ["exit","quit","q"]:
-                confirm = input("Are you sure you want to quit the console? ").strip()
-                if confirm in ["y","yes"]:
-                    quit()
-                else:
-                    continue
-            case _:
-                print("Received input: ",userin)
+        userin = input("Skeletor > ").strip().lower()
+        if not userin:
+            continue  
+        if userin in commands:
+            commands[userin]() 
+        else:
+            print(f"Unknown command: '{userin}'. Type 'help' for list.")
 
 if __name__ == "__main__":
     main()
