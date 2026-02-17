@@ -12,7 +12,7 @@ import requests
 # Use environment variables with fallback
 SKELETOR_IP = os.getenv("SKELETOR_IP", "127.0.0.1")
 SKELETOR_PORT = os.getenv("SKELETOR_PORT", "80")
-SKELETOR_WEBSHELL_HANDLER_ADDR = os.getenv("SKELETOR_WEBSHELL_HANDLER_ADDR","127.0.0.1:9000")
+SKELETOR_SHELL_HANDLER_ADDR = os.getenv("SKELETOR_SHELL_HANDLER_ADDR","127.0.0.1:9000")
 CUSTOM_HEADERS = {}
 SKELETOR_PASSWD = "letredin"
 if SKELETOR_PASSWD is not None:
@@ -134,7 +134,7 @@ class Manager(App):
             yield Static("Select Agent to connect back to your handler:")
             yield OptionList(id="shell-agent-selector")
             yield Label("Handler Address (IP:Port):")
-            yield Input(value=SKELETOR_WEBSHELL_HANDLER_ADDR, id="shell-handler-input")
+            yield Input(value=SKELETOR_SHELL_HANDLER_ADDR, id="shell-handler-input")
             yield Button("Launch Shell", id="launch-shell-button", variant="primary")
             yield Static("", id="status-message")
             yield Button("Back to Menu", classes="back-button")
