@@ -15,6 +15,7 @@ SKELETOR_AUTH_KEY=os.getenv("SKELETOR_AUTH_KEY","")
 CUSTOM_HEADERS = {}
 if SKELETOR_AUTH_KEY.strip() != "":
     CUSTOM_HEADERS["X-Skeletor-Auth"] = SKELETOR_AUTH_KEY
+CURRENT_TARGETS=[]
 
 def init():
     print("Initializing Skeletor Console..."+"\n"*3)
@@ -25,7 +26,10 @@ def cmd_help():
     menu = {
         "help": "Show this list of commands",
         "agents": "View Skeletor Agents",
-        "netinfo":"View Skeletor Server Networking Config",
+        "netinfo": "View Skeletor Server Networking Config",
+        "command": "Issue a command to an agent",
+        "shell": "Launch an interactive shell",
+        "multiexec": "Execute a command on multiple targets",
         "quit": "Exit Skeletor Console"
     }
     print("\nCommands:\n")
@@ -53,16 +57,80 @@ def cmd_agents():
                   f"{agent['last_seen']:<22} "
                   f"{tag_str}\n\n")
     except Exception as e:
-        print(e)
+        print(f"\n{e}\n")
 
 def cmd_netinfo():
     print(f"\nSkeletor Server Address: {SKELETOR_IP}:{SKELETOR_PORT}")
     print(f"Skeletor Shell Handler Address: {SKELETOR_SHELL_HANDLER_ADDR}\n\n")
 
+def cmd_issuecmd():
+    agent_id = input("Enter agent ID of target: ").strip()
+    command = input("Command to execute: ").strip()
+    try:
+        data = {'agent_id': agent_id, 'action': 'command', 'input': command}
+        requests.post(f"http://{SKELETOR_IP}:{SKELETOR_PORT}/make-task", json=data,headers=CUSTOM_HEADERS)
+        print(f"Task created for {agent_id}\n")
+    except Exception as e:
+        print(f"\n{e}\n")
+
+def cmd_multiexec():
+    print("1. View Current Targets")
+    print("2. Add Target")
+    print("3. Remove Target")
+    print("4. Clear Targets")
+    print("5. Issue Command to All Targets")
+    print("6. Exit multiexec mode")
+    while True:
+        try:
+            userin = input("\n> ").strip().split()
+            match userin:
+                case ["1"] | ["view"]:
+                    for agent in CURRENT_TARGETS: print(agent)
+                case ["add", target_id]:
+                    CURRENT_TARGETS.append(target_id)
+                case ["2"]:
+                    newtarget = input("New Target: ").strip()
+                    CURRENT_TARGETS.append(newtarget)
+                case ["remove", target_id]:
+                    if target_id in CURRENT_TARGETS: CURRENT_TARGETS.remove(target_id)
+                case ["3"]:
+                    toremove = input("Target to remove: ").strip()
+                    if target_id in CURRENT_TARGETS: CURRENT_TARGETS.remove(toremove)
+                case ["4"] | ["clear"]:
+                    CURRENT_TARGETS.clear()
+                case ["5"]:
+                    command = input("\nCommand to execute: ").strip()
+                    print()
+                    for agent_id in CURRENT_TARGETS:
+                        data = {'agent_id': agent_id, 'action': 'command', 'input': command}
+                        requests.post(f"http://{SKELETOR_IP}:{SKELETOR_PORT}/make-task", json=data,headers=CUSTOM_HEADERS)
+                        print(f"Task created for {agent_id}")
+                    print("\n")
+                case ["6"] | ["exit"] | ["quit"] | ["q"]:
+                    break
+                case _:
+                    print("Unrecognized option")
+        except KeyboardInterrupt:
+            break
+        except Exception as e:
+            print(f"\n{e}\n")
+
+def cmd_shell():
+    pass
+
+def cmd_result():
+    pass
+
+def cmd_agentinfo():
+    pass
+
 def main():
     commands = {
     "agents": cmd_agents,
     "netinfo": cmd_netinfo,
+    "command": cmd_issuecmd,
+    "cmd": cmd_issuecmd,
+    "multiexec": cmd_multiexec,
     "help": cmd_help,
     "h": cmd_help,
     "exit": cmd_exit,
