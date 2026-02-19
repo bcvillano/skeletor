@@ -127,10 +127,30 @@ def cmd_shell():
 
 
 def cmd_result():
-    pass
+    while True:
+        try:
+            pass
+        except KeyboardInterrupt:
+            break
+        except Exception as e:
+                print(f"\n{e}\n")
 
 def cmd_agentinfo():
-    pass
+    try:
+        agentid = input("\nAgent ID:\n").strip()
+        print("Agent ID:",agentid)
+        data = {"agent_id":agentid}
+        agent_info = requests.post(f"http://{SKELETOR_IP}:{SKELETOR_PORT}/get-agent",json=data,headers=CUSTOM_HEADERS).json()
+        print("Status:",agent_info["status"])
+        print("Callbacks:",agent_info["callbacks"])
+        print("Last Seen:",agent_info["last_seen"])
+        print("Last Command:",agent_info["last_command"])
+        print("Last Result:",agent_info["last_result"],"\n\n")
+    except KeyboardInterrupt:
+        return
+    except Exception as e:
+        print(e)
+    
 
 def main():
     commands = {
@@ -140,6 +160,7 @@ def main():
     "cmd": cmd_issuecmd,
     "multiexec": cmd_multiexec,
     "shell": cmd_shell,
+    "agentinfo": cmd_agentinfo,
     "help": cmd_help,
     "h": cmd_help,
     "exit": cmd_exit,
