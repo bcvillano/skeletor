@@ -6,6 +6,9 @@ import os
 import requests
 
 load_dotenv()
+ANSI_GREEN = "\033[0;32m"
+ANSI_RED = "\033[0;31m"
+ANSI_RESET = "\033[0m"
 CURRENT_PATH = Path(__file__).resolve().parent
 LOGO_PATH = CURRENT_PATH / "resources" / "logo.txt"
 SKELETOR_IP = os.getenv("SKELETOR_IP", "127.0.0.1")
@@ -53,9 +56,12 @@ def cmd_agents():
         print(output_header)
         print("-" * len(output_header))
         for agent in agents:
+            status = agent['status']
+            color = ANSI_RED if status == "inactive" else ANSI_GREEN
+            status_formatted = f"{color}{status:<12}{ANSI_RESET}"
             tag_str = ", ".join(agent.get('tags', []))
             print(f"{agent['agent_id']:<16} "
-                  f"{agent['status']:<12} "
+                  f"{status_formatted:<12} "
                   f"{agent['callbacks']:<12} "
                   f"{agent['last_seen']:<22} "
                   f"{tag_str}")
