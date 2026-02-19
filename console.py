@@ -27,9 +27,11 @@ def cmd_help():
         "help": "Show this list of commands",
         "agents": "View Skeletor Agents",
         "netinfo": "View Skeletor Server Networking Config",
+        "agentinfo": "View information about a specific agent",
         "command": "Issue a command to an agent",
         "shell": "Launch an interactive shell",
         "multiexec": "Execute a command on multiple targets",
+        "results": "Lookup results from agents",
         "quit": "Exit Skeletor Console"
     }
     print("\nCommands:\n")
@@ -55,7 +57,8 @@ def cmd_agents():
                   f"{agent['status']:<12} "
                   f"{agent['callbacks']:<12} "
                   f"{agent['last_seen']:<22} "
-                  f"{tag_str}\n\n")
+                  f"{tag_str}")
+        print("\n")
     except Exception as e:
         print(f"\n{e}\n")
 
@@ -129,7 +132,14 @@ def cmd_shell():
 def cmd_result():
     while True:
         try:
-            pass
+            agentid = input("Agent ID to retrieve results from: ").strip()
+            if agentid == "":
+                continue
+            if agentid in ["exit","back","q","quit"]:
+                break
+            data = {"agent_id": agentid}
+            result = requests.post(f"http://{SKELETOR_IP}:{SKELETOR_PORT}/get-result", json=data,headers=CUSTOM_HEADERS).json()
+            print("\n" + "Agent: " + agentid + "\n" + "Command: " + result.get('command') + "\n" + "Result: " + result.get('result') + "\n")
         except KeyboardInterrupt:
             break
         except Exception as e:
@@ -137,15 +147,15 @@ def cmd_result():
 
 def cmd_agentinfo():
     try:
-        agentid = input("\nAgent ID:\n").strip()
-        print("Agent ID:",agentid)
+        agentid = input("\nAgent ID: ").strip()
+        print("\nAgent ID:",agentid)
         data = {"agent_id":agentid}
         agent_info = requests.post(f"http://{SKELETOR_IP}:{SKELETOR_PORT}/get-agent",json=data,headers=CUSTOM_HEADERS).json()
         print("Status:",agent_info["status"])
         print("Callbacks:",agent_info["callbacks"])
         print("Last Seen:",agent_info["last_seen"])
         print("Last Command:",agent_info["last_command"])
-        print("Last Result:",agent_info["last_result"],"\n\n")
+        print("Last Result:",agent_info["last_result"],"\n")
     except KeyboardInterrupt:
         return
     except Exception as e:
@@ -161,6 +171,8 @@ def main():
     "multiexec": cmd_multiexec,
     "shell": cmd_shell,
     "agentinfo": cmd_agentinfo,
+    "results": cmd_result,
+    "result": cmd_result,
     "help": cmd_help,
     "h": cmd_help,
     "exit": cmd_exit,
