@@ -211,9 +211,9 @@ def register_agent():
                 implant_type_json = {"agent_id":agent_id,"tags":implant_type}
                 auth_key = config.get("auth_key")
                 if auth_key is None:
-                    requests.post("http://127.0.0.1/tag-agent",json=os_json,timeout=10)
+                    requests.post("http://127.0.0.1/tag-agent",json=implant_type_json,timeout=10)
                 else:
-                    requests.post("http://127.0.0.1/tag-agent",json=os_json,timeout=10,headers={"X-Skeletor-Auth":auth_key})
+                    requests.post("http://127.0.0.1/tag-agent",json=implant_type_json,timeout=10,headers={"X-Skeletor-Auth":auth_key})
             return jsonify({"message": "Agent registered successfully"}), 201
         else:
             agent.status = 'active'
