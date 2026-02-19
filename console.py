@@ -32,6 +32,7 @@ def cmd_help():
         "shell": "Launch an interactive shell",
         "multiexec": "Execute a command on multiple targets",
         "results": "Lookup results from agents",
+        "addtag": "Add tags for agent",
         "quit": "Exit Skeletor Console"
     }
     print("\nCommands:\n")
@@ -159,7 +160,20 @@ def cmd_agentinfo():
     except KeyboardInterrupt:
         return
     except Exception as e:
-        print(e)
+        print(f"\n{e}\n")
+
+def cmd_addtag():
+    try:
+        agentid = input("Agent ID: ").strip()
+        newtags = input("Tags to add (csv format): ").strip()
+        data = {"agent_id": agentid,"tags": newtags}
+        response = requests.post(f"http://{SKELETOR_IP}:{SKELETOR_PORT}/tag-agent", json=data,headers=CUSTOM_HEADERS).json()
+        print(f"\nAdded tags for {agentid}: {', '.join(response['added_tags']) if response['added_tags'] else 'None'}")
+        print(f"All tags for {agentid}: {', '.join(response['all_tags'])}\n")
+    except KeyboardInterrupt:
+        return
+    except Exception as e:
+        print(f"\n{e}\n")
     
 
 def main():
@@ -173,6 +187,7 @@ def main():
     "agentinfo": cmd_agentinfo,
     "results": cmd_result,
     "result": cmd_result,
+    "addtag": cmd_addtag,
     "help": cmd_help,
     "h": cmd_help,
     "exit": cmd_exit,

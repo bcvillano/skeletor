@@ -201,7 +201,7 @@ def register_agent():
             db.session.add(new_agent)
             db.session.commit()
             if os:
-                os_json = {"agent_id":agent_id,"tags":os}
+                os_json = {"agent_id":agent_id,"tags":os.capitalize()}
                 auth_key = config.get("auth_key")
                 if auth_key is None:
                     requests.post("http://127.0.0.1/tag-agent",json=os_json,timeout=10)
