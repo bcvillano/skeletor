@@ -47,30 +47,16 @@ starting a new interactive shell.
 
 # Usage
 ## Server
-The skelctl command line utility is the primary way of interacting with the skeletor server. 
+The Skeletor Console is the primary way of interacting with the Skeletor server. 
 
-Additionally, there is the manager.py script included in the repository, which is a TUI application built with the Textual framework which makes viewing agents, issuing commands and viewing results much easier than using skelctl.
+Previously, the manager.py TUI and skelctl CLI could be used to manage Skeletor. However, these are now considered **legacy** and will not be updated. Additionally, skelctl will not work with the current version of Skeletor, as targeting logic has been moved from server side to client side. However, the legacy version of Skeletor can still be accessed in the **legacy** branch and will remain compatible with these management interfaces but will not receive any additional updates.
 
-### Skelctl Basic Usage
-To view all agents, use the command:
-```
-skelctl get agents
-```
-which will return a list of agent IDs and whether they are "active" or "inactive" (inactive means they haven't beaconed out to the server in 5 minutes). To issue a command, you must first set Skeletor's **targets**, a list of agent IDs
-which management tools like skelctl can retrieve to know which agents to create tasks for. To do this, use the command:
-```
-skelctl set targets 10.0.0.0,10.0.0.1
-```
-with the last argument being a list of comma seperated agent IDs of the agents you wish to target. Then run the **skelctl cmd** command to make a task for each agent in the targets to execute the given command.
-```
-skelctl cmd "whoami ; id"
-``` 
+### Skeletor Console
+To interact with the Skeletor server and issue commands to agents, use the Skeletor Console (*console.py*). Skeletor Console provides an interactive interface which allows you to issue commands and control Skeletor agents.
 ## Implants
 To set up the implants, make any configuration changes needed in the main function of the implant program. Then, when run it will begin beaconing out to retrieve commands from the configured server. There are currently implants written in two different languages: Python and Go.
 
 ### Python Implant
-
-> **Python Implant is now considered Legacy.** Most new features will **NOT** be implemented in the Python version. It is highly recommended to use the **Go Implant** for all active development and deployments. The Python Implant may be removed in future updates
 
  The Python implant has three configurable arguments when creating an instance of the Beacon class: server_ip (mandatory, the IP or FQDN of the host the server is running on), port (port the server is listening on, defaults to 80), and callback_interval (the interval, in seconds, of how often the implant should beacon out. Default is 120). Additional arguments which can be defined are the jitter (defines the amount of seconds, + or -, the callback interval should be randomly adjusted each sleep to make callbacks harder to detect) and the debug and https booleans (both default to False, if https is True then https protocol will be used instead of http, and if debug is True then debugging + error messages will be printed to stdout). The following codeblock illustrates what the main function of beacon.py looks like when specifying all arguments to the implant.
 ```python
