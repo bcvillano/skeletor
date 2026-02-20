@@ -1,5 +1,5 @@
 // shell_handler.go
-package shell_handler
+package main
 
 import (
 	"bufio"

