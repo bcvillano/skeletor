@@ -36,6 +36,7 @@ def cmd_help():
         "multiexec": "Execute a command on multiple targets",
         "results": "Lookup results from agents",
         "addtag": "Add tags for agent",
+        "rmtag": "Remove tags for agent",
         "quit": "Exit Skeletor Console"
     }
     print("\nCommands:\n")
@@ -180,6 +181,21 @@ def cmd_addtag():
         return
     except Exception as e:
         print(f"\n{e}\n")
+
+def cmd_removetag():
+    pass
+    try:
+        agentid = input("Agent ID: ").strip()
+        badtags = input("Tags to remove (csv format): ").strip()
+        data = {"agent_id": agentid,"tags": badtags}
+        response = requests.post(f"http://{SKELETOR_IP}:{SKELETOR_PORT}/remove-tag", json=data,headers=CUSTOM_HEADERS).json()
+        print(f"\nRemoved tags for {agentid}: {', '.join(response['removed_tags']) if response['removed_tags'] else 'None'}")
+        print(f"All tags for {agentid}: {', '.join(response['all_tags'])}\n")
+    except KeyboardInterrupt:
+        return
+    except Exception as e:
+        print(f"\n{e}\n")
+    
     
 
 def main():
@@ -194,6 +210,8 @@ def main():
     "results": cmd_result,
     "result": cmd_result,
     "addtag": cmd_addtag,
+    "rmtag": cmd_removetag,
+    "removetag": cmd_removetag,
     "help": cmd_help,
     "h": cmd_help,
     "exit": cmd_exit,
