@@ -87,10 +87,11 @@ def cmd_issuecmd():
 def cmd_multiexec():
     print("1. View Current Targets")
     print("2. Add Target")
-    print("3. Remove Target")
-    print("4. Clear Targets")
-    print("5. Issue Command to All Targets")
-    print("6. Exit multiexec mode")
+    print("3. Add Targets By Tag")
+    print("4. Remove Target")
+    print("5. Clear Targets")
+    print("6. Issue Command to All Targets")
+    print("7. Exit multiexec mode")
     while True:
         try:
             userin = input("\n> ").strip().split()
@@ -102,14 +103,24 @@ def cmd_multiexec():
                 case ["2"]:
                     newtarget = input("New Target: ").strip()
                     CURRENT_TARGETS.append(newtarget)
+                case ["3"]:
+                    pass
+                    tag = input("Tag to target: ").strip()
+                    tag_data = {"tag": tag}
+                    resp = requests.post(f"http://{SKELETOR_IP}:{SKELETOR_PORT}/tagged", json=tag_data,headers=CUSTOM_HEADERS).json()
+                    tagged_agents = resp['agents']
+                    for agent in tagged_agents:
+                        if agent not in CURRENT_TARGETS:
+                            CURRENT_TARGETS.append(agent)
+                    print(f"Agents added to targets: {', '.join(tagged_agents)}")
                 case ["remove", target_id]:
                     if target_id in CURRENT_TARGETS: CURRENT_TARGETS.remove(target_id)
-                case ["3"]:
+                case ["4"]:
                     toremove = input("Target to remove: ").strip()
                     if target_id in CURRENT_TARGETS: CURRENT_TARGETS.remove(toremove)
-                case ["4"] | ["clear"]:
+                case ["5"] | ["clear"]:
                     CURRENT_TARGETS.clear()
-                case ["5"]:
+                case ["6"]:
                     command = input("\nCommand to execute: ").strip()
                     print()
                     for agent_id in CURRENT_TARGETS:
@@ -117,7 +128,7 @@ def cmd_multiexec():
                         requests.post(f"http://{SKELETOR_IP}:{SKELETOR_PORT}/make-task", json=data,headers=CUSTOM_HEADERS)
                         print(f"Task created for {agent_id}")
                     print("\n")
-                case ["6"] | ["exit"] | ["quit"] | ["q"]:
+                case ["7"] | ["exit"] | ["quit"] | ["q"]:
                     break
                 case _:
                     print("Unrecognized option")
