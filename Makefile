@@ -14,6 +14,10 @@ RESOURCES=./resources
 all: clean create-directory linux mac freebsd arm windows
 comp: clean linux freebsd windows
 
+install-tools:
+	go install github.com/akavel/rsrc@latest
+	go install github.com/josephspurrier/goversioninfo/cmd/goversioninfo@latest
+
 create-directory:
 	mkdir ${DIRECTORY}
 

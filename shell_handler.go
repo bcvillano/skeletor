@@ -29,7 +29,7 @@ func main() {
 		defer conn.Close()
 
 		remoteAddr := r.RemoteAddr
-		fmt.Printf("\n[+] Connection received from %s\n",remoteAddr)
+		fmt.Printf("\n[+] Connection received from %s\n", remoteAddr)
 
 		// Create a scanner for terminal input
 		scanner := bufio.NewScanner(os.Stdin)

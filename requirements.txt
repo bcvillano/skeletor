@@ -2,7 +2,6 @@ flask
 flask-sqlalchemy
 requests
 textual
-argparse
 python-dotenv
 psycopg2-binary
 gunicorn
