@@ -495,11 +495,12 @@ def status():
 def homepage():
     return redirect(url_for('status'))
 
+#Start agent checker outside function so it executes even when containerized
+agent_checker = threading.Thread(target=check_agent_status,daemon=True)
+agent_checker.start()
 
 def main():
     setup()
-    agent_checker = threading.Thread(target=check_agent_status,daemon=True)
-    agent_checker.start()
     app.run(debug=False,host='0.0.0.0',port=80,threaded=True)
 
 
