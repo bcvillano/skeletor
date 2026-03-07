@@ -460,26 +460,23 @@ def status():
         <h1>[ SKELETOR C2 AGENT STATUS ]</h1>
         <pre>
     """
-    header = f"{'AGENT ID':<18}{'STATUS':<12}{'CALLBACKS':<12}{'LAST SEEN':<22}{'TAGS'}"
+    header = f"{'AGENT ID':<16} {'STATUS':<12} {'CALLBACKS':<12} {'LAST SEEN':<22} {'TAGS'}"
     webpage_content += f"<b>{header}</b>\n"
     webpage_content += "=" * len(header) + "\n"
-
+    
     for agent in Agent.query.all():
         status_text = agent.status
         status_class = "inactive" if status_text == "inactive" else "active"
         status_span = f'<span class="{status_class}">{status_text:<12}</span>'
-        
         try:
             tag_str = ", ".join([t.name for t in agent.tags]) if agent.tags else ""
         except:
             tag_str = ""
-
         last_seen_str = agent.last_seen.strftime('%Y-%m-%d %H:%M:%S') if agent.last_seen else "NEVER"
-
-        line = (f"{agent.agent_id:<18}"
-                f"{status_span}"
-                f"{str(agent.callbacks):<12}"
-                f"{last_seen_str:<22}"
+        line = (f"{agent.agent_id:<16} "
+                f"{status_span} "
+                f"{str(agent.callbacks):<12} "
+                f"{last_seen_str:<22} "
                 f"{tag_str}")
         webpage_content += line + "\n"
         
