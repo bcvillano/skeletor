@@ -461,6 +461,7 @@ def status():
         <h1>[ SKELETOR C2 AGENT STATUS ]</h1>
         <pre>
     """
+    
     header = f"{'AGENT ID':<18} {'STATUS':<16} {'CALLBACKS':<14} {'LAST SEEN':<26} {'TAGS'}"
     webpage_content += f"<b>{header}</b>\n"
     webpage_content += "=" * len(header) + "\n"
@@ -468,29 +469,26 @@ def status():
     for agent in Agent.query.all():
         status_text = agent.status
         status_class = "inactive" if status_text == "inactive" else "active"
-        
         status_span = f'<span class="{status_class}">{status_text:<16}</span>'
-        
+        cb_count = str(agent.callbacks)        
+        ls_time = agent.last_seen.strftime('%Y-%m-%d %H:%M:%S') if agent.last_seen else "NEVER"        
         try:
-            tag_str = ", ".join([t.name for t in agent.tags]) if agent.tags else ""
+            tag_list = [t.name for t in agent.tags]
+            tag_str = ", ".join(tag_list) if tag_list else ""
         except:
             tag_str = ""
-
-        last_seen_str = agent.last_seen.strftime('%Y-%m-%d %H:%M:%S') if agent.last_seen else "NEVER"
-
         line = (f"{agent.agent_id:<18} "
                 f"{status_span} "
-                f"{str(agent.callbacks):<14} "
-                f"{last_seen_str:<26} "
+                f"{cb_count:<14} "
+                f"{ls_time:<26} "
                 f"{tag_str}")
-        
         webpage_content += line + "\n"
-        
     webpage_content += """
         </pre>
     </body>
     </html>
     """
+    return webpage_content
 
 #Main Page
 @app.route('/', methods=['GET'])
