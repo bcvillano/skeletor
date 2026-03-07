@@ -478,7 +478,7 @@ def status():
         except:
             tag_str = ""
         line = (f"   {agent.agent_id:<18} "
-                f"{status_span} "
+                f" {status_span} "
                 f" {cb_count:<14} "
                 f"{ls_time:<26} "
                 f"{tag_str}")
