@@ -466,14 +466,15 @@ def status():
     for agent in Agent.query.all():
         status_class = "inactive" if agent.status == "inactive" else "active"
         status_span = f'<span class="{status_class}">{agent.status:<12}</span>'
-        
-        tag_str = ", ".join(agent.tags) if agent.tags else "NONE"
+        try:
+            tag_str = ", ".join([t.name for t in agent.tags]) if agent.tags else ""
+        except Exception:
+            tag_str = ""
         line = (f"{agent.agent_id:<18} "
                 f"{status_span}"
                 f"{str(agent.callbacks):<12} "
-                f"{agent.last_seen:<22} "
+                f"{agent.last_seen.strftime('%Y-%m-%d %H:%M:%S') if agent.last_seen else 'NEVER':<22} "
                 f"{tag_str}")
-        
         webpage_content += line + "\n"
     webpage_content += """
         </pre>
