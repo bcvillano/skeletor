@@ -111,9 +111,9 @@ def update_pwnboard(ip):
     if config["pwnboard"]:
         try:
             #data = {'ip': ip, 'type': "skeletor"} # Legacy PWNBOARD format
-            data = {'ip': ip, 'access_type' : "HTTP C2", 'application':"Skeletor"}
+            data = {'ip': ip, 'access_type' : "HTTP C2", 'application':"skeletor"}
             if config["PWNBOARD_AUTH_TOKEN"] is not None:
-                headers = {'Content-Type': 'application/json', 'Authorization': f"max-this-is-scuffed {config['PWNBOARD_AUTH_TOKEN']}"}   
+                headers = {'Content-Type': 'application/json', 'Authorization': f"max-this-is-scuffed {config['PWNBOARD_AUTH_TOKEN']}"}  
             req = requests.post(config["pwnboard_url"], json=data,headers=headers, timeout=3)
         except Exception as e:
             print(f"EXCEPTION:\n{e}")
