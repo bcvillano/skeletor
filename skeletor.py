@@ -429,11 +429,28 @@ def tagged():
 @app.route('/status', methods=['GET'])
 def status():
     webpage_content = """
-    <h1>Welcome to Skeletor</h1>
-    <h3>Agent Status</h3>
+    <body style="background-color: black; color: white; font-family: 'Courier New', monospace; padding: 20px;">
+        <h1 style="color: red;">SKELETOR C2 PANEL</h1>
+        <pre style="line-height: 1.5;">
     """
+    header = f"{'AGENT ID':<16} {'STATUS':<12} {'CALLBACKS':<12} {'LAST SEEN':<22} {'TAGS'}"
+    webpage_content += f"<b>{header}</b>\n"
+    webpage_content += "-" * len(header) + "\n"
     for agent in Agent.query.all():
-        webpage_content += f"<p>{agent.agent_id} - {agent.status}</p>"
+        status = agent.status
+        color = "red" if status == "inactive" else "#00FF00" # Neon green
+        tag_str = ", ".join(agent.tags) if agent.tags else ""
+        status_span = f'<span style="color: {color};">{status:<12}</span>'
+        line = (f"{agent.agent_id:<16} "
+                f"{status_span}"
+                f"{str(agent.callbacks):<12} "
+                f"{agent.last_seen:<22} "
+                f"{tag_str}")
+        webpage_content += line + "\n"
+    webpage_content += """
+        </pre>
+    </body>
+    """
     return webpage_content
 
 #Main Page
