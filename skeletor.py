@@ -429,27 +429,56 @@ def tagged():
 @app.route('/status', methods=['GET'])
 def status():
     webpage_content = """
-    <body style="background-color: black; color: white; font-family: 'Courier New', monospace; padding: 20px;">
-        <h1 style="color: red;">SKELETOR C2 PANEL</h1>
-        <pre style="line-height: 1.5;">
+    <html>
+    <head>
+        <link href="https://fonts.googleapis.com/css2?family=VT323&display=swap" rel="stylesheet">
+        <style>
+            body {
+                background-color: #050505;
+                color: #00FF41; /* Classic Matrix/Terminal Green */
+                font-family: 'VT323', monospace;
+                padding: 40px;
+                text-shadow: 0 0 5px #00FF41; /* The "Glow" effect */
+            }
+            h1 {
+                color: #FF0000;
+                text-shadow: 0 0 8px #FF0000;
+                text-transform: uppercase;
+                border-bottom: 2px solid #FF0000;
+                display: inline-block;
+                margin-bottom: 20px;
+            }
+            pre {
+                font-size: 22px; /* VT323 needs to be a bit larger to stay readable */
+                line-height: 1.2;
+            }
+            .inactive { color: #FF0000; text-shadow: 0 0 5px #FF0000; }
+            .active { color: #00FF41; text-shadow: 0 0 5px #00FF41; }
+        </style>
+    </head>
+    <body>
+        <h1>[ SKELETOR C2 AGENT STATUS ]</h1>
+        <pre>
     """
-    header = f"{'AGENT ID':<16} {'STATUS':<12} {'CALLBACKS':<12} {'LAST SEEN':<22} {'TAGS'}"
+    header = f"{'AGENT ID':<18} {'STATUS':<12} {'CALLBACKS':<12} {'LAST SEEN':<22} {'TAGS'}"
     webpage_content += f"<b>{header}</b>\n"
-    webpage_content += "-" * len(header) + "\n"
+    webpage_content += "=" * (len(header)+5) + "\n"
     for agent in Agent.query.all():
-        status = agent.status
-        color = "red" if status == "inactive" else "#00FF00" # Neon green
-        tag_str = ", ".join(agent.tags) if agent.tags else ""
-        status_span = f'<span style="color: {color};">{status:<12}</span>'
-        line = (f"{agent.agent_id:<16} "
+        status_class = "inactive" if agent.status == "inactive" else "active"
+        status_span = f'<span class="{status_class}">{agent.status:<12}</span>'
+        
+        tag_str = ", ".join(agent.tags) if agent.tags else "NONE"
+        line = (f"{agent.agent_id:<18} "
                 f"{status_span}"
                 f"{str(agent.callbacks):<12} "
                 f"{agent.last_seen:<22} "
                 f"{tag_str}")
+        
         webpage_content += line + "\n"
     webpage_content += """
         </pre>
     </body>
+    </html>
     """
     return webpage_content
 
