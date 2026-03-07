@@ -479,7 +479,7 @@ def status():
             tag_str = ""
         line = (f"   {agent.agent_id:<18} "
                 f" {status_span} "
-                f" {cb_count:<14} "
+                f"{cb_count:<14} "
                 f"{ls_time:<26} "
                 f"{tag_str}")
         webpage_content += line + "\n"
