@@ -464,7 +464,7 @@ def status():
     
     header = f"{'AGENT ID':<18} {'STATUS':<16} {'CALLBACKS':<14} {'LAST SEEN':<26} {'TAGS'}"
     webpage_content += f"<b>{header}</b>\n"
-    webpage_content += "=" * len(header)+5 + "\n"
+    webpage_content += "=" * (len(header)+5) + "\n"
     
     for agent in Agent.query.all():
         status_text = agent.status
