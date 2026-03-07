@@ -473,9 +473,9 @@ def status():
         except:
             tag_str = ""
         last_seen_str = agent.last_seen.strftime('%Y-%m-%d %H:%M:%S') if agent.last_seen else "NEVER"
-        line = (f"{agent.agent_id:<16} "
+        line = (f"\t{agent.agent_id:<16} "
                 f"{status_span} "
-                f"{str(agent.callbacks):<12} "
+                f"{"\t"+str(agent.callbacks):<12} "
                 f"{last_seen_str:<22} "
                 f"{tag_str}")
         webpage_content += line + "\n"
