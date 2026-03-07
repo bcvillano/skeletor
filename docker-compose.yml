@@ -13,6 +13,7 @@ services:
       - DB_PASSWORD=letredin
     volumes:
       - ./logs:/c2/logs
+      - ./files:/c2/files
     networks:
       - skeletor-network
     restart: unless-stopped

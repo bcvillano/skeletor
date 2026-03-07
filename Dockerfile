@@ -12,7 +12,6 @@ WORKDIR /c2
 COPY requirements.txt .
 COPY skeletor.py .
 COPY .env .
-COPY ./files /c2/files
 
 RUN pip3 install --no-cache-dir -r requirements.txt
 
