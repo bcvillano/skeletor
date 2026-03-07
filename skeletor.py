@@ -435,10 +435,10 @@ def status():
         <style>
             body {
                 background-color: #050505;
-                color: #00FF41; /* Classic Matrix/Terminal Green */
+                color: #00FF41;
                 font-family: 'VT323', monospace;
                 padding: 40px;
-                text-shadow: 0 0 5px #00FF41; /* The "Glow" effect */
+                text-shadow: 0 0 5px #00FF41;
             }
             h1 {
                 color: #FF0000;
@@ -449,7 +449,7 @@ def status():
                 margin-bottom: 20px;
             }
             pre {
-                font-size: 22px; /* VT323 needs to be a bit larger to stay readable */
+                font-size: 22px;
                 line-height: 1.2;
             }
             .inactive { color: #FF0000; text-shadow: 0 0 5px #FF0000; }
@@ -460,22 +460,29 @@ def status():
         <h1>[ SKELETOR C2 AGENT STATUS ]</h1>
         <pre>
     """
-    header = f"{'AGENT ID':<18} {'STATUS':<12} {'CALLBACKS':<12} {'LAST SEEN':<22} {'TAGS'}"
+    header = f"{'AGENT ID':<18}{'STATUS':<12}{'CALLBACKS':<12}{'LAST SEEN':<22}{'TAGS'}"
     webpage_content += f"<b>{header}</b>\n"
-    webpage_content += "=" * (len(header)+5) + "\n"
+    webpage_content += "=" * len(header) + "\n"
+
     for agent in Agent.query.all():
-        status_class = "inactive" if agent.status == "inactive" else "active"
-        status_span = f'<span class="{status_class}">{agent.status:<12}</span>'
+        status_text = agent.status
+        status_class = "inactive" if status_text == "inactive" else "active"
+        status_span = f'<span class="{status_class}">{status_text:<12}</span>'
+        
         try:
             tag_str = ", ".join([t.name for t in agent.tags]) if agent.tags else ""
-        except Exception:
+        except:
             tag_str = ""
-        line = (f"{agent.agent_id:<18} "
+
+        last_seen_str = agent.last_seen.strftime('%Y-%m-%d %H:%M:%S') if agent.last_seen else "NEVER"
+
+        line = (f"{agent.agent_id:<18}"
                 f"{status_span}"
-                f"{str(agent.callbacks):<12} "
-                f"{agent.last_seen.strftime('%Y-%m-%d %H:%M:%S') if agent.last_seen else 'NEVER':<22} "
+                f"{str(agent.callbacks):<12}"
+                f"{last_seen_str:<22}"
                 f"{tag_str}")
         webpage_content += line + "\n"
+        
     webpage_content += """
         </pre>
     </body>
