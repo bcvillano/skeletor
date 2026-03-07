@@ -461,7 +461,6 @@ def status():
         <h1>[ SKELETOR C2 AGENT STATUS ]</h1>
         <pre>
     """
-    # Using specific widths to match your screenshots: 18, 16, 14, 26
     header = f"{'AGENT ID':<18} {'STATUS':<16} {'CALLBACKS':<14} {'LAST SEEN':<26} {'TAGS'}"
     webpage_content += f"<b>{header}</b>\n"
     webpage_content += "=" * len(header) + "\n"
@@ -469,18 +468,22 @@ def status():
     for agent in Agent.query.all():
         status_text = agent.status
         status_class = "inactive" if status_text == "inactive" else "active"
-        status_formatted = f"{status_text:<16}"
-        status_span = f'<span class="{status_class}">{status_formatted}</span>'
+        
+        status_span = f'<span class="{status_class}">{status_text:<16}</span>'
+        
         try:
             tag_str = ", ".join([t.name for t in agent.tags]) if agent.tags else ""
         except:
             tag_str = ""
+
         last_seen_str = agent.last_seen.strftime('%Y-%m-%d %H:%M:%S') if agent.last_seen else "NEVER"
+
         line = (f"{agent.agent_id:<18} "
-                f"{status_span}"
+                f"{status_span} "
                 f"{str(agent.callbacks):<14} "
                 f"{last_seen_str:<26} "
                 f"{tag_str}")
+        
         webpage_content += line + "\n"
         
     webpage_content += """
@@ -488,7 +491,6 @@ def status():
     </body>
     </html>
     """
-    return webpage_content
 
 #Main Page
 @app.route('/', methods=['GET'])
