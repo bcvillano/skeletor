@@ -17,7 +17,7 @@ app = Flask(__name__)
 load_dotenv()
 
 #Configuration dictionary
-config = {"upload_dir": "uploads", "show_requests": True,"debug":False,"pwnboard":os.getenv("PWNBOARD",False),"pwnboard_url":os.getenv("PWNBOARD_URL",""),"ip_whitelisting":False,"allowed_ips":["127.0.0.1","::1"],"auth_key":os.getenv("SKELETOR_AUTH_KEY",None),"notify_discord":os.getenv("NOTIFY_DISCORD",False)}
+config = {"upload_dir": "uploads", "show_requests": True,"debug":False,"pwnboard":os.getenv("PWNBOARD",False),"pwnboard_url":os.getenv("PWNBOARD_URL",""),"ip_whitelisting":False,"allowed_ips":["127.0.0.1","::1"],"auth_key":os.getenv("SKELETOR_AUTH_KEY",None),"notify_discord":os.getenv("NOTIFY_DISCORD",False), "PWNBOARD_AUTH_TOKEN":os.getenv("PWNBOARD_AUTH_TOKEN",None)}
 if config.get("notify_discord"):
     config["RESULT_WEBHOOK"] = os.getenv("SKELETOR_RESULT_WEBHOOK",None)
     config["STATUS_WEBHOOK"] = os.getenv("SKELETOR_STATUS_WEBHOOK",None)
@@ -110,10 +110,13 @@ def restrict_remote(func): # Decorator to restrict management routes
 def update_pwnboard(ip):
     if config["pwnboard"]:
         try:
-            data = {'ip': ip, 'type': "skeletor"}
-            req = requests.post(config["pwnboard_url"], json=data, timeout=3)
-        except:
-            pass
+            #data = {'ip': ip, 'type': "skeletor"} # Legacy PWNBOARD format
+            data = {'ip': ip, 'access_type' : "HTTP C2", 'application':"Skeletor"}
+            if config["PWNBOARD_AUTH_TOKEN"] is not None:
+                headers = {'Content-Type': 'application/json', 'Authorization': config["PWNBOARD_AUTH_TOKEN"]}   
+            req = requests.post(config["pwnboard_url"], json=data,headers=headers, timeout=3)
+        except Exception as e:
+            print(f"EXCEPTION:\n{e}")
 
 def update_timestamp(agent_id):
     agent = Agent.query.filter_by(agent_id=agent_id).first()
