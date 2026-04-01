@@ -8,8 +8,7 @@ import (
 func wmiExec(command string) {
 	wmicommand := "powershell -Command \"" + command + " > /Users/Public/log.txt\""
 	fmt.Print(wmicommand + "\n")
-	// We use the WMI class Win32_Process and call its 'Create' method.
-	// This tells the Windows Management Instrumentation service to start the process.
+	// Use the WMI class Win32_Process and call its 'Create' method to tell the WMI service to start the process to execute command in powershell
 	wmiCommand := fmt.Sprintf("(Get-WmiObject -List | Where-Object {$_.Name -eq 'Win32_Process'}).Create('%s')", wmicommand)
 
 	cmd := exec.Command("powershell", "-Command", wmiCommand)
@@ -24,5 +23,5 @@ func wmiExec(command string) {
 }
 
 func main() {
-	wmiExec("whoami")
+	wmiExec("Start-Sleep -Seconds 120;whoami")
 }
