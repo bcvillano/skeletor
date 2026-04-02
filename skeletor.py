@@ -492,6 +492,10 @@ def status():
     """
     return webpage_content
 
+@app.route('/healthcheck', methods=['GET'])
+def healthcheck():
+    return jsonify({"status": "healthy"})
+
 #Main Page
 @app.route('/', methods=['GET'])
 def homepage():
