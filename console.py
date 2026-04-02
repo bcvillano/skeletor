@@ -47,7 +47,9 @@ def cmd_help():
 def cmd_exit():
     userin = input("Are you sure you want to exit the console? ").strip().lower()
     if userin in ["yes","y"]:
-        quit()
+        return True
+    else: 
+        return False
 
 def cmd_agents():
     try:
@@ -223,25 +225,27 @@ def main():
     "removetag": cmd_removetag,
     "help": cmd_help,
     "h": cmd_help,
-    "exit": cmd_exit,
-    "quit": cmd_exit,
-    "q": cmd_exit,
     }
     init()
-    try:
-        while True:
+    active = True
+    while active:
+        try:
             userin = input("Skeletor > ").strip().lower()
             if not userin:
                 continue  
-            if userin in commands:
+            elif userin in ["exit","quit","q"]:
+                if cmd_exit():
+                    active = False
+            elif userin in commands:
                 commands[userin]() 
             else:
                 print(f"Unknown command: '{userin}'. Type 'help' for list.")
-    except KeyboardInterrupt:
-        print()
-        cmd_exit()
-    except Exception as e:
-        print(e)
+        except KeyboardInterrupt:
+            print()
+            if cmd_exit():
+                active = False
+        except Exception as e:
+            print(e)
 
 if __name__ == "__main__":
     main()
