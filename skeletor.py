@@ -76,7 +76,6 @@ class Task(db.Model):
     input2 = db.Column(db.String(5000), nullable=True,default="NULL")
     completed = db.Column(db.Boolean, default=False)
     result = db.Column(db.Text, nullable=True,default="NULL")
-    returncode = db.Column(db.Integer, nullable=True,default=1234) # Default value to differentiate from actual return codes
 
 # Initialize database
 with app.app_context():
@@ -237,7 +236,6 @@ def submit_results():
         task_id = data['task_id']
         task = db.session.get(Task, task_id)
         task.completed = True
-        task.returncode = data['returncode']
         if task.result != "NULL":
             task.result = result
         agent = Agent.query.filter_by(agent_id=agent_id).first()
