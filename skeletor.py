@@ -92,6 +92,8 @@ def setup():
     print(config["allowed_ips"])
     os.makedirs(config['upload_dir'], exist_ok=True)
     os.makedirs("files", exist_ok=True)
+    agent_checker = threading.Thread(target=check_agent_status,daemon=True)
+    agent_checker.start()
 
 
 def restrict_remote(func): # Decorator to restrict management routes
@@ -495,14 +497,7 @@ def status():
 def homepage():
     return redirect(url_for('status'))
 
-#Start agent checker outside function so it executes even when containerized
-agent_checker = threading.Thread(target=check_agent_status,daemon=True)
-agent_checker.start()
-
-def main():
-    setup()
-    app.run(debug=False,host='0.0.0.0',port=80,threaded=True)
-
-
+    
+setup() #Call setup function no whether run through gunicorn or directly to ensure necessary directories are created and agent status checker thread is started
 if __name__ == '__main__':
-    main()
+    app.run(debug=False,host='0.0.0.0',port=80,threaded=True)
