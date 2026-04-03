@@ -89,5 +89,4 @@ agent := Agent{
 | :--- | :---: | :---: |
 | **Command Execution** | &check; | &check; |
 | **HTTPS Support** | &cross;| &check; |
-| **Shellcode Process Injection** | Windows Only (Currently In Progress)| &cross; |
 |**Websocket-based Reverse Shell**|&check;|&cross;|
