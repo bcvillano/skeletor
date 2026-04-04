@@ -7,9 +7,17 @@ import (
 	"runtime"
 )
 
-func execCommand(command string) *exec.Cmd {
+func execCommand(command string) (string, error) {
 	if runtime.GOOS == "freebsd" {
-		return exec.Command("sh", "-c", command)
+		out, err := exec.Command("sh", "-c", command).Output()
+		if err != nil {
+			return "", err
+		}
+		return string(out), nil
 	}
-	return exec.Command("bash", "-c", command)
+	out, err := exec.Command("bash", "-c", command).Output()
+	if err != nil {
+		return "", err
+	}
+	return string(out), nil
 }

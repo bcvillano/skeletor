@@ -7,14 +7,12 @@ import (
 	"syscall"
 )
 
-func execCommand(command string) *exec.Cmd {
+func execCommand(command string) (string, error) {
 	cmd := exec.Command("powershell", "-WindowStyle", "Hidden", "-Command", command)
 	cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true}
-	return cmd
-}
-
-func classicExec(command string) *exec.Cmd {
-	cmd := exec.Command("powershell", "-WindowStyle", "Hidden", "-Command", command)
-	cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true}
-	return cmd
+	out, err := cmd.Output()
+	if err != nil {
+		return "", err
+	}
+	return string(out), nil
 }
