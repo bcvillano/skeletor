@@ -5,6 +5,11 @@ from dotenv import load_dotenv
 import os
 import requests
 
+import urllib3
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+
+
+
 load_dotenv()
 ANSI_GREEN = "\033[0;32m"
 ANSI_RED = "\033[0;31m"
