@@ -91,9 +91,9 @@ class Beacon:
                 self.handle_task(tasks)
             except Exception as e:
                 self.sleep()
-                continue
                 if self.debug:
                     print(e)
+                continue
 
 def main():
     beacon = Beacon("127.0.0.1",callback_interval=15,jitter=7)

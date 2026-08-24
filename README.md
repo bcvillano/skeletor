@@ -88,5 +88,5 @@ agent := Agent{
 | Feature | Go Implant | Python Implant|
 | :--- | :---: | :---: |
 | **Command Execution** | &check; | &check; |
-| **HTTPS Support** | &cross;| &check; |
+| **HTTPS Support** | &check;| &check; |
 |**Websocket-based Reverse Shell**|&check;|&cross;|
