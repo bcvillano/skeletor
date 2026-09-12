@@ -12,7 +12,7 @@ SOURCE=./implants/go
 RESOURCES=./resources
 
 all: clean create-directory linux mac freebsd arm windows
-comp: clean linux freebsd windows
+comp: clean create-directory linux freebsd windows
 
 install-tools:
 	go install github.com/akavel/rsrc@latest
