@@ -5,8 +5,8 @@ services:
       - "80:80"
       - "443:443"
     volumes:
-      - ./https/nginx.conf:/etc/nginx/nginx.conf:ro
-      - ./https/certs:/etc/nginx/certs:ro
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./certs/:/etc/nginx/certs:ro
     networks:
       - skeletor-network
     depends_on:
@@ -15,7 +15,7 @@ services:
 
   skeletor:
     build:
-      context: .
+      context: ..
       dockerfile: Dockerfile
     expose:
       - "80"
