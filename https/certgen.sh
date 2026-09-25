@@ -1,6 +1,6 @@
 #!/bin/bash
 
-mkdir -p ./https/certs
+mkdir -p ./certs
 
 openssl req -x509 -newkey rsa:4096 -nodes \
   -keyout ./certs/key.pem \
