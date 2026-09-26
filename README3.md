@@ -1,6 +1,6 @@
 # Skeletor
 Skeletor is a HTTP(S) C2 built upon the Flask framework designed for red vs. blue cybersecurity competitions. Use only on systems which you own or are authorized to deploy on.  
-Skeletor implants communicate on a beaconing system, sending outbound POST requests to the Skeletor server's **/tasks** route at specified intervals to retrieve their tasks from the queue, execute them and send back the result
+Skeletor implants communicate on a beaconing system, sending outbound POST requests to the Skeletor server's **/tasks** route at specified intervals to retrieve their tasks, execute them and send back the result
 ## Quickstart
 ### Setting Up Server
 Copy  the provided .env.sample file to .env and edit the values for your desired configuration (see environment variables section of README for more details)  
