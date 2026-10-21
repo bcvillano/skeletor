@@ -318,11 +318,6 @@ def make_task():
     data = request.json
     agent_id = data.get('agent_id')
     action = data.get('action')
-    # command = data.get('command')
-    # if data['action'] == "command":
-    #     command = data.get('command')
-    # else:
-    #     command = "NULL"
     if data.get("input"):
         input1 = data.get("input")
     else:
